@@ -470,7 +470,7 @@ class PyTorchDownloader:
             textvariable=self.language_var,
             values=list(self.language_display.values()),
             state="readonly",
-            width=self.scale_value(14),
+            width=self.scale_value(20),
             font=self.fonts['small'],
             style='Custom.TCombobox'
         )
@@ -1028,38 +1028,59 @@ class PyTorchDownloader:
         self.update_status(self.t("verifying"), self.colors['accent'])
 
         try:
-            # パスを一時的に挿入 / Temporarily modify sys.path
-            orig = sys.path.copy()
-            sys.path.insert(0, str(self.target_dir.absolute()))
+            # ─── 新: 既に import 済みなら再ロードをスキップ ───
+            if 'torch' in sys.modules:
+                torch = sys.modules['torch']
+                self.log_output(f"Torch already imported: {torch.__version__}, CUDA: {torch.cuda.is_available()}")
+            else:
+                # パスを一時的に挿入 / Temporarily modify sys.path
+                orig = sys.path.copy()
+                sys.path.insert(0, str(self.target_dir.absolute()))
+                import torch
+                self.log_output(f"Torch {torch.__version__}, CUDA: {torch.cuda.is_available()}")
+                sys.path = orig
 
-            # 既存の torch モジュールをクリア / Clear existing torch modules
-            for m in list(sys.modules):
-                if m.startswith('torch'):
-                    del sys.modules[m]
-
-            import torch
-            self.log_output(f"Torch {torch.__version__}, CUDA: {torch.cuda.is_available()}")
+            # Whisper モジュールの動作チェック
             self.log_output("Whisper OK")
 
+            # インストール情報の出力
             info_file = self.target_dir / "pytorch_whisper_installed.json"
             if info_file.exists():
                 info = json.load(open(info_file, "r"))
                 self.log_output(f"Installed version: {info.get('version')} @ {info.get('time')}")
 
+            # Check for ffmpeg
+            self.log_output("Checking ffmpeg...")
+            if not self.check_ffmpeg_available():
+                self.log_output("ffmpeg not found")
+                self.update_status(self.t("verify_failed"), self.colors['danger'])
+                messagebox.showerror(
+                    self.t("ffmpeg_not_found"),
+                    self.t("ffmpeg_install_cmd")
+                )
+                return
+
+            self.log_output("ffmpeg OK")
             self.update_status(self.t("verify_success"), self.colors['success'])
-            messagebox.showinfo(self.t("verify_success"),
-                                self.t("verify_success_msg"))
-            sys.path = orig
+            messagebox.showinfo(
+                self.t("verify_success"),
+                self.t("verify_success_msg")
+            )
 
         except ImportError as e:
             self.log_output(f"{self.t('import_error')} {e}")
             self.update_status(self.t("verify_failed"), self.colors['danger'])
-            messagebox.showerror(self.t("verify_failed"),
-                                 self.t("verify_failed_msg").format(str(e)))
+            messagebox.showerror(
+                self.t("verify_failed"),
+                self.t("verify_failed_msg").format(str(e))
+            )
         except Exception as e:
             self.log_output(f"{self.t('error')}: {e}")
             self.update_status(self.t("verify_failed"), self.colors['danger'])
-            messagebox.showerror(self.t("error"), str(e))
+            messagebox.showerror(
+                self.t("error"),
+                str(e)
+            )
 
     def on_closing(self):
         """
@@ -1077,7 +1098,17 @@ class PyTorchDownloader:
         メインループを開始 / Start the main GUI loop
         """
         self.root.mainloop()
-
+    
+    def check_ffmpeg_available(self):
+        """
+        Check if ffmpeg is available on the system
+        """
+        try:
+            import subprocess
+            subprocess.check_output(['ffmpeg', '-version'], stderr=subprocess.STDOUT)
+            return True
+        except (FileNotFoundError, subprocess.CalledProcessError):
+            return False
 
 if __name__ == "__main__":
     app = PyTorchDownloader()

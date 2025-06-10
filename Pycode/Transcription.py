@@ -120,7 +120,7 @@ class ProgressCapture(io.StringIO):
                 self.text_callback(start_time_str, end_time_str, segment_text)
 
 class AudioSubtitleSystem:
-    """Audio Transcription System with multilingual support and responsive design"""
+    """Audio Transcription System with multilingual support and adaptive responsive design"""
     def __init__(self):
         # State management
         self.current_file = None
@@ -170,8 +170,8 @@ class AudioSubtitleSystem:
         # Check for PyTorch/Whisper availability
         self.check_dependencies()
         
-        # Setup GUI with responsive design
-        self.setup_responsive_gui()
+        # Setup GUI with adaptive responsive design
+        self.setup_adaptive_gui()
 
     def init_translations(self):
         """Initialize all UI text translations"""
@@ -510,65 +510,167 @@ class AudioSubtitleSystem:
             else:
                 self.device = "cpu"
 
-    def calculate_scaling(self):
-        """Calculate scaling factors based on screen size"""
+    def calculate_adaptive_scaling(self):
+        """Calculate adaptive scaling factors based on screen resolution"""
         screen_width = self.root.winfo_screenwidth()
         screen_height = self.root.winfo_screenheight()
         
-        # Base dimensions for scaling (designed for 1920x1080)
-        base_width = 1920
-        base_height = 1080
+        # Detect screen category
+        if screen_width >= 3840:  # 4K
+            self.screen_category = "4K"
+            base_width, base_height = 3840, 2160
+            self.dpi_scale = 2.0
+            self.min_scale = 1.0
+            self.max_scale = 1.5
+        elif screen_width >= 2560:  # 2K/QHD
+            self.screen_category = "2K"
+            base_width, base_height = 2560, 1440
+            self.dpi_scale = 1.5
+            self.min_scale = 0.9
+            self.max_scale = 1.3
+        else:  # 1080p or smaller
+            self.screen_category = "1080p"
+            base_width, base_height = 1920, 1080
+            self.dpi_scale = 1.0
+            self.min_scale = 0.8
+            self.max_scale = 1.1
         
-        # Calculate scaling factors
+        # Calculate base scaling
         self.scale_x = screen_width / base_width
         self.scale_y = screen_height / base_height
-        self.scale = min(self.scale_x, self.scale_y)  # Use minimum to maintain aspect ratio
+        self.scale = min(self.scale_x, self.scale_y)
         
-        # Ensure minimum scaling
-        self.scale = max(self.scale, 0.75)
+        # Apply adaptive compression
+        self.scale = max(min(self.scale, self.max_scale), self.min_scale)
         
-        # Font scaling
+        # Adaptive font scaling
         self.base_font_sizes = {
-            'title': 22,
-            'header': 13,
-            'normal': 11,
-            'small': 10
+            'title': {
+                '1080p': 24,
+                '2K': 28,
+                '4K': 34
+            },
+            'header': {
+                '1080p': 14,
+                '2K': 16,
+                '4K': 20
+            },
+            'normal': {
+                '1080p': 12,
+                '2K': 14,
+                '4K': 16
+            },
+            'small': {
+                '1080p': 11,
+                '2K': 12,
+                '4K': 14
+            }
         }
         
+        # Calculate actual font sizes
         self.scaled_fonts = {}
-        for key, size in self.base_font_sizes.items():
-            self.scaled_fonts[key] = max(int(size * self.scale), 8)
+        for font_type, sizes in self.base_font_sizes.items():
+            base_size = sizes[self.screen_category]
+            scaled_size = int(base_size * self.scale)
+            # Ensure minimum readability
+            min_sizes = {'title': 18, 'header': 12, 'normal': 10, 'small': 9}
+            self.scaled_fonts[font_type] = max(scaled_size, min_sizes[font_type])
         
-        # Widget dimensions
-        self.scaled_dimensions = {
-            'window_width': int(1000 * self.scale),
-            'window_height': int(1000 * self.scale),
-            'min_width': int(800 * self.scale),
-            'min_height': int(700 * self.scale),
-            'padding_large': int(15 * self.scale),
-            'padding_medium': int(12 * self.scale),
-            'padding_small': int(8 * self.scale),
-            'button_padding_x': int(20 * self.scale),
-            'button_padding_y': int(10 * self.scale),
-            'entry_padding': int(12 * self.scale),
-            'progress_length': int(500 * self.scale),
-            'output_height': int(8 * self.scale),
-            'combo_width': int(30 * self.scale),
-            'lang_combo_width': int(10 * self.scale)
+        # Adaptive widget dimensions
+        self.calculate_widget_dimensions()
+        
+    def calculate_widget_dimensions(self):
+        """Calculate adaptive widget dimensions based on screen category"""
+        # Base dimensions for different screen categories
+        base_dimensions = {
+            '1080p': {
+                'window_width':     1100,   # 550 × 2
+                'window_height':     475,
+                'min_width':         900,   # 450 × 2
+                'min_height':        400,
+                'padding_large':       8,
+                'padding_medium':      6,
+                'padding_small':       4,
+                'button_padding_x':   10,
+                'button_padding_y':    5,
+                'entry_padding':       6,
+                'progress_length':   500,   # 250 × 2
+                'output_height':       4,
+                'combo_width':        30,   # 15 × 2
+                'lang_combo_width':   12    # 6  × 2
+            },
+            '2K': {
+                'window_width':     1400,   # 700 × 2
+                'window_height':     650,
+                'min_width':        1200,   # 600 × 2
+                'min_height':        550,
+                'padding_large':      10,
+                'padding_medium':      8,
+                'padding_small':       5,
+                'button_padding_x':   13,
+                'button_padding_y':    6,
+                'entry_padding':       8,
+                'progress_length':   700,   # 350 × 2
+                'output_height':       6,
+                'combo_width':        36,   # 18 × 2
+                'lang_combo_width':   14    # 7  × 2
+            },
+            '4K': {
+                'window_width':     1800,   # 900 × 2
+                'window_height':     800,
+                'min_width':        1600,   # 800 × 2
+                'min_height':        700,
+                'padding_large':      13,
+                'padding_medium':     10,
+                'padding_small':       6,
+                'button_padding_x':   15,
+                'button_padding_y':    8,
+                'entry_padding':       9,
+                'progress_length':   900,   # 450 × 2
+                'output_height':       8,
+                'combo_width':        40,   # 20 × 2
+                'lang_combo_width':   16    # 8  × 2
+            }
         }
 
-    def setup_responsive_gui(self):
+
+        # Get base dimensions for current screen
+        base = base_dimensions[self.screen_category]
+        
+        # Apply scaling with adaptive compression
+        self.scaled_dimensions = {}
+        for key, value in base.items():
+            if key in ['window_width', 'window_height', 'min_width', 'min_height']:
+                # Window dimensions use direct scale
+                self.scaled_dimensions[key] = int(value * self.scale)
+            elif 'padding' in key or 'button_padding' in key:
+                # Padding uses normal scaling for better visibility
+                self.scaled_dimensions[key] = max(int(value * self.scale), 5)
+            else:
+                # Other dimensions use normal scaling
+                self.scaled_dimensions[key] = int(value * self.scale)
+
+    def setup_adaptive_gui(self):
         self.root = tk.Tk()
         self.root.title(self.t("window_title"))
         
-        # Calculate scaling before setting up GUI
-        self.calculate_scaling()
+        # Calculate adaptive scaling before setting up GUI
+        self.calculate_adaptive_scaling()
         
-        # Set window size based on screen dimensions
+        # Set window size based on adaptive calculations
         window_width = self.scaled_dimensions['window_width']
         window_height = self.scaled_dimensions['window_height']
         min_width = self.scaled_dimensions['min_width']
         min_height = self.scaled_dimensions['min_height']
+        
+        # Ensure window fits within screen bounds
+        screen_width = self.root.winfo_screenwidth()
+        screen_height = self.root.winfo_screenheight()
+        
+        # Apply maximum size constraints with margin
+        margin = 50  # Margin from screen edges
+        window_width = min(window_width, screen_width - margin * 2)
+        window_height = min(window_height, screen_height - margin * 2)
         
         # Set minimum window size
         self.root.minsize(min_width, min_height)
@@ -577,10 +679,8 @@ class AudioSubtitleSystem:
         self.root.geometry(f"{window_width}x{window_height}")
         self.root.update_idletasks()
         
-        ws = self.root.winfo_screenwidth()
-        hs = self.root.winfo_screenheight()
-        x = (ws // 2) - (window_width // 2)
-        y = (hs // 2) - (window_height // 2) - 20
+        x = (screen_width // 2) - (window_width // 2)
+        y = (screen_height // 2) - (window_height // 2) - 200
         self.root.geometry(f"{window_width}x{window_height}+{x}+{y}")
         
         self.root.configure(bg=self.colors['background'])
@@ -592,27 +692,37 @@ class AudioSubtitleSystem:
         # Style configuration
         self.style = ttk.Style()
         self.style.theme_use('clam')
-        self.configure_responsive_styles()
+        self.configure_adaptive_styles()
 
-        # Main container with responsive padding
+        # Main container with adaptive padding
         main = tk.Frame(self.root, bg=self.colors['background'])
         main.pack(fill=tk.BOTH, expand=True, 
                   padx=self.scaled_dimensions['padding_large'], 
                   pady=self.scaled_dimensions['padding_large'])
 
-        # Create responsive sections
-        self.create_responsive_header(main)
-        self.create_responsive_file_section(main)
+        # Create adaptive sections
+        self.create_adaptive_header(main)
+        self.create_adaptive_file_section(main)
         
         if not WHISPER_AVAILABLE:
-            self.create_responsive_dependency_warning(main)
+            self.create_adaptive_dependency_warning(main)
             
-        self.create_responsive_model_section(main)
-        self.create_responsive_topic_section(main)
-        self.create_responsive_status_section(main)
-        self.create_responsive_transcription_output_section(main)
-        self.create_responsive_save_section(main)
-
+        self.create_adaptive_parameter_button(main)
+        self.create_adaptive_model_section(main)
+        self.create_adaptive_topic_section(main)
+        self.create_adaptive_status_section(main)
+        self.create_adaptive_transcription_output_section(main)
+        self.create_adaptive_save_section(main)
+        
+        self.root.update_idletasks()
+        req_h = self.root.winfo_reqheight()
+        cur_h = self.root.winfo_height()
+        if req_h > cur_h:
+            screen_h = self.root.winfo_screenheight()
+            margin   = 50                           
+            new_h    = min(req_h + 20, screen_h - margin)
+            self.root.geometry(f"{self.root.winfo_width()}x{new_h}")
+            
         # Bind resize event for dynamic updates
         self.root.bind('<Configure>', self.on_window_resize)
         
@@ -621,18 +731,18 @@ class AudioSubtitleSystem:
         self.update_status(self.t("waiting_to_start"), self.colors['text_light'])
 
     def on_window_resize(self, event=None):
-        """Handle window resize events"""
+        """Handle window resize events with debouncing"""
         if hasattr(self, '_last_resize_time'):
-            # Debounce resize events
             if time.time() - self._last_resize_time < 0.1:
                 return
         self._last_resize_time = time.time()
 
-    def configure_responsive_styles(self):
-        """Configure styles with responsive dimensions"""
+    def configure_adaptive_styles(self):
+        """Configure styles with adaptive dimensions"""
         button_pad_x = self.scaled_dimensions['button_padding_x']
         button_pad_y = self.scaled_dimensions['button_padding_y']
         
+        # Button styles with adaptive padding and fonts
         self.style.configure('Primary.TButton',
                              background=self.colors['accent'],
                              foreground='white',
@@ -660,6 +770,7 @@ class AudioSubtitleSystem:
                              padding=(button_pad_x, button_pad_y),
                              font=('Yu Gothic', self.scaled_fonts['normal']))
         
+        # Entry style with adaptive padding
         entry_pad = self.scaled_dimensions['entry_padding']
         self.style.configure('Modern.TEntry',
                              fieldbackground=self.colors['surface'],
@@ -668,28 +779,45 @@ class AudioSubtitleSystem:
                              bordercolor=self.colors['border'],
                              padding=(entry_pad, entry_pad // 2),
                              font=('Yu Gothic', self.scaled_fonts['normal']))
+        
+        # Combobox style
+        self.style.configure('TCombobox',
+                             fieldbackground=self.colors['surface'],
+                             borderwidth=2,
+                             relief='solid',
+                             bordercolor=self.colors['border'],
+                             arrowsize=int(self.scaled_fonts['normal'] * 1.2))
 
-    def create_responsive_header(self, parent):
-        """Create header with responsive layout"""
+    def create_adaptive_header(self, parent):
+        """Create header with adaptive layout"""
         hf = tk.Frame(parent, bg=self.colors['background'])
         hf.pack(fill=tk.X, pady=(0, self.scaled_dimensions['padding_large']))
         
-        # Create a frame for the subtitle and language selector
+        # Create a frame for the title and language selector
         title_frame = tk.Frame(hf, bg=self.colors['background'])
         title_frame.pack(fill=tk.X)
         
-        # Left side - subtitle only
+        # Left side - titles
         left_frame = tk.Frame(title_frame, bg=self.colors['background'])
         left_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        
+        self.header_title_label = tk.Label(
+            left_frame, 
+            text=self.t("header_title"),
+            font=('Yu Gothic', self.scaled_fonts['title'], 'bold'),
+            fg=self.colors['primary'], 
+            bg=self.colors['background']
+        )
+        self.header_title_label.pack()
         
         self.header_subtitle_label = tk.Label(
             left_frame, 
             text=self.t("header_subtitle"),
-            font=('Segoe UI', self.scaled_fonts['header'], 'bold'),
-            fg=self.colors['text'], 
+            font=('Segoe UI', self.scaled_fonts['normal']),
+            fg=self.colors['text_light'], 
             bg=self.colors['background']
         )
-        self.header_subtitle_label.pack()
+        self.header_subtitle_label.pack(pady=(3, 0))
         
         # Right side - language selector
         lang_frame = tk.Frame(title_frame, bg=self.colors['background'])
@@ -724,8 +852,8 @@ class AudioSubtitleSystem:
         self.language_combo.pack(side=tk.LEFT)
         self.language_combo.bind("<<ComboboxSelected>>", self.on_language_change)
 
-    def create_responsive_file_section(self, parent):
-        """Create file section with responsive layout"""
+    def create_adaptive_file_section(self, parent):
+        """Create file section with adaptive layout"""
         ff = tk.Frame(parent, bg=self.colors['surface'], relief='solid', bd=1)
         ff.pack(fill=tk.X, pady=(0, self.scaled_dimensions['padding_medium']))
         
@@ -734,26 +862,14 @@ class AudioSubtitleSystem:
                    padx=self.scaled_dimensions['padding_large'], 
                    pady=self.scaled_dimensions['padding_medium'])
         
-        # Header row with title on left and parameter button on right
-        header_row = tk.Frame(inner, bg=self.colors['surface'])
-        header_row.pack(fill=tk.X, pady=(0, self.scaled_dimensions['padding_small'] // 2))
-        
         self.file_section_label = tk.Label(
-            header_row, 
+            inner, 
             text=self.t("audio_file_selection"),
             font=('Yu Gothic', self.scaled_fonts['header'], 'bold'),
             fg=self.colors['text'], 
             bg=self.colors['surface']
         )
-        self.file_section_label.pack(side=tk.LEFT)
-        
-        self.param_btn = ttk.Button(
-            header_row,
-            text=self.t("adjust_parameters"),
-            command=self.open_parameter_window,
-            style='Primary.TButton'
-        )
-        self.param_btn.pack(side=tk.RIGHT)
+        self.file_section_label.pack(anchor=tk.W, pady=(0, self.scaled_dimensions['padding_small'] // 2))
         
         btnf = tk.Frame(inner, bg=self.colors['surface'])
         btnf.pack(fill=tk.X, pady=(0, self.scaled_dimensions['padding_small']))
@@ -784,9 +900,21 @@ class AudioSubtitleSystem:
         )
         self.file_path_label.pack(anchor=tk.W)
 
+    def create_adaptive_parameter_button(self, parent):
+        """Add adaptive 'Adjust Parameters' button"""
+        pf = tk.Frame(parent, bg=self.colors['background'])
+        pf.pack(pady=(self.scaled_dimensions['padding_small'] // 2, 
+                      self.scaled_dimensions['padding_large']))
+        self.param_btn = ttk.Button(
+            pf,
+            text=self.t("adjust_parameters"),
+            command=self.open_parameter_window,
+            style='Primary.TButton'
+        )
+        self.param_btn.pack()
 
-    def create_responsive_dependency_warning(self, parent):
-        """Create responsive warning section for missing dependencies"""
+    def create_adaptive_dependency_warning(self, parent):
+        """Create adaptive warning section for missing dependencies"""
         wf = tk.Frame(parent, bg=self.colors['warning'], relief='solid', bd=2)
         wf.pack(fill=tk.X, pady=(0, self.scaled_dimensions['padding_large']))
         
@@ -830,8 +958,8 @@ class AudioSubtitleSystem:
         )
         self.recheck_btn.pack(side=tk.LEFT)
 
-    def create_responsive_model_section(self, parent):
-        """Create model section with responsive layout"""
+    def create_adaptive_model_section(self, parent):
+        """Create model section with adaptive layout"""
         mf = tk.Frame(parent, bg=self.colors['surface'], relief='solid', bd=1)
         mf.pack(fill=tk.X, pady=(0, self.scaled_dimensions['padding_medium']))
         
@@ -862,8 +990,8 @@ class AudioSubtitleSystem:
         self.model_combo.set("large-v3")
         self.model_combo.pack(fill=tk.X)
 
-    def create_responsive_topic_section(self, parent):
-        """Create topic section with responsive layout"""
+    def create_adaptive_topic_section(self, parent):
+        """Create topic section with adaptive layout"""
         tf = tk.Frame(parent, bg=self.colors['surface'], relief='solid', bd=1)
         tf.pack(fill=tk.X, pady=(0, self.scaled_dimensions['padding_medium']))
         
@@ -904,8 +1032,8 @@ class AudioSubtitleSystem:
         self.update_language_combo()
         self.transcription_language_combo.pack(fill=tk.X)
 
-    def create_responsive_status_section(self, parent):
-        """Create status section with responsive layout"""
+    def create_adaptive_status_section(self, parent):
+        """Create status section with adaptive layout"""
         sf = tk.Frame(parent, bg=self.colors['surface'], relief='solid', bd=1)
         sf.pack(fill=tk.X, pady=(0, self.scaled_dimensions['padding_medium']))
         
@@ -935,9 +1063,13 @@ class AudioSubtitleSystem:
         )
         self.status_label.pack(side=tk.RIGHT)
         
+        # Adaptive progress bar length
+        progress_length = min(self.scaled_dimensions['progress_length'], 
+                              parent.winfo_width() - self.scaled_dimensions['padding_large'] * 4)
+        
         self.progress_bar = ttk.Progressbar(
             sin, 
-            length=self.scaled_dimensions['progress_length'], 
+            length=progress_length, 
             mode='indeterminate'
         )
         self.progress_bar.pack(fill=tk.X, pady=(0, self.scaled_dimensions['padding_small']))
@@ -963,8 +1095,8 @@ class AudioSubtitleSystem:
         )
         self.duration_label.pack(side=tk.RIGHT)
 
-    def create_responsive_transcription_output_section(self, parent):
-        """Create the real-time transcription output section with responsive layout"""
+    def create_adaptive_transcription_output_section(self, parent):
+        """Create transcription output section with adaptive layout"""
         tf = tk.Frame(parent, bg=self.colors['surface'], relief='solid', bd=1)
         tf.pack(fill=tk.BOTH, expand=True, pady=(0, self.scaled_dimensions['padding_medium']))
         
@@ -992,8 +1124,8 @@ class AudioSubtitleSystem:
         )
         self.clear_output_btn.pack(side=tk.RIGHT)
         
-        # Calculate dynamic height for output text
-        output_height = max(self.scaled_dimensions['output_height'], 6)
+        # Adaptive output height based on screen category
+        output_height = self.scaled_dimensions['output_height']
         
         self.output_text = scrolledtext.ScrolledText(
             inner,
@@ -1008,7 +1140,7 @@ class AudioSubtitleSystem:
         )
         self.output_text.pack(fill=tk.BOTH, expand=True)
         
-        # Configure text tags with responsive fonts
+        # Configure text tags with adaptive fonts
         self.output_text.tag_configure(
             "timestamp", 
             foreground=self.colors['accent'], 
@@ -1024,8 +1156,8 @@ class AudioSubtitleSystem:
             font=('Yu Gothic', self.scaled_fonts['small'], 'italic')
         )
 
-    def create_responsive_save_section(self, parent):
-        """Create save section with responsive layout"""
+    def create_adaptive_save_section(self, parent):
+        """Create save section with adaptive layout"""
         slf = tk.Frame(parent, bg=self.colors['background'])
         slf.pack(pady=self.scaled_dimensions['padding_small'])
         
@@ -1051,24 +1183,30 @@ class AudioSubtitleSystem:
         self.save_subtitle_btn.pack(side=tk.LEFT)
 
     def open_parameter_window(self):
-        """Open parameter settings window with responsive layout"""
+        """Open parameter settings window with adaptive layout"""
         win = tk.Toplevel(self.root)
         win.title(self.t("parameter_settings"))
         
-        # Calculate window size
-        param_width = int(500 * self.scale)
-        param_height = int(460 * self.scale)
+        # Calculate adaptive window size
+        param_width = int(600 * self.scale)
+        param_height = int(550 * self.scale)
+        
+        # Ensure it fits on screen
+        screen_width = win.winfo_screenwidth()
+        screen_height = win.winfo_screenheight()
+        param_width = min(param_width, screen_width - 100)
+        param_height = min(param_height, screen_height - 100)
+        
         win.geometry(f"{param_width}x{param_height}")
         win.configure(bg=self.colors['surface'])
         
         # Center the parameter window
         win.update_idletasks()
-        x = (win.winfo_screenwidth() // 2) - (param_width // 2)
-        y = (win.winfo_screenheight() // 2) - (param_height // 2)
+        x = (screen_width // 2) - (param_width // 2)
+        y = (screen_height // 2) - (param_height // 2)
         win.geometry(f"{param_width}x{param_height}+{x}+{y}")
         
         pad = self.scaled_dimensions['padding_large']
-        small_pad = self.scaled_dimensions['padding_small']
         
         # Temperature
         tk.Label(win, text="Temperature:",
@@ -1158,6 +1296,7 @@ class AudioSubtitleSystem:
         self.root.title(self.t("window_title"))
         
         # Update header
+        self.header_title_label.config(text=self.t("header_title"))
         self.header_subtitle_label.config(text=self.t("header_subtitle"))
         self.lang_label.config(text=self.t("language"))
         
@@ -1169,7 +1308,8 @@ class AudioSubtitleSystem:
             self.file_path_label.config(text=self.t("no_file_selected"))
         
         # Update parameter button
-        self.param_btn.config(text=self.t("adjust_parameters"))
+        if hasattr(self, 'param_btn'):
+            self.param_btn.config(text=self.t("adjust_parameters"))
         
         # Update dependency warning if present
         if hasattr(self, 'dep_warning_label'):
@@ -1390,23 +1530,7 @@ class AudioSubtitleSystem:
             self.update_status(self.t("loading_model").format(model_size), self.colors['accent'])
             self.append_status_message(self.t("loading").format(model_size))
             
-            # Save original stdout/stderr
-            orig_stdout = sys.stdout
-            orig_stderr = sys.stderr
-            
-            # Create a simple capture for model loading/downloading
-            try:
-                # Redirect output to avoid write errors during download
-                sys.stdout = io.StringIO()
-                sys.stderr = io.StringIO()
-                
-                # Load the model
-                model = whisper.load_model(model_size, device=self.device)
-                
-            finally:
-                # Always restore stdout/stderr
-                sys.stdout = orig_stdout
-                sys.stderr = orig_stderr
+            model = whisper.load_model(model_size, device=self.device)
             
             self.is_downloading = False
             self.is_loading_model = False
