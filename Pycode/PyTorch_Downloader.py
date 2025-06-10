@@ -49,10 +49,14 @@ class PyTorchDownloader:
             'danger': '#BF616A',
             'text': '#2E3440',
             'text_light': '#4C566A',
-            'background': '#ECEFF4',
+            'background': '#F5F7FA',
             'surface': '#FFFFFF',
-            'border': '#D8DEE9'
+            'border': '#E1E8ED',
+            'shadow': '#D8DEE9'
         }
+
+        # Initialize responsive scaling
+        self.setup_responsive_scaling()
 
         # プラットフォーム検出 / Detect platform (Windows/Linux etc.)
         self.detect_platform()
@@ -63,6 +67,64 @@ class PyTorchDownloader:
         # 既存インストールの確認 / Check if installation already exists
         self.check_existing_installation()
 
+    def setup_responsive_scaling(self):
+        """Calculate scaling factors based on screen size"""
+        # Create temporary root to get screen dimensions
+        temp_root = tk.Tk()
+        screen_width = temp_root.winfo_screenwidth()
+        screen_height = temp_root.winfo_screenheight()
+        temp_root.destroy()
+        
+        # Calculate base scaling factor (reference: 1920x1080)
+        width_scale = screen_width / 1920
+        height_scale = screen_height / 1080
+        self.scale_factor = min(width_scale, height_scale)
+        
+        # Ensure reasonable scaling limits
+        self.scale_factor = max(0.6, min(self.scale_factor, 1.5))
+        
+        # Calculate window dimensions (90% of screen size to leave room for taskbar)
+        self.window_width = int(screen_width * 0.5)
+        self.window_height = int(screen_height * 0.85)
+        
+        # Set minimum window size
+        self.window_width = max(700, self.window_width)
+        self.window_height = max(500, self.window_height)
+        
+        # Calculate scaled dimensions for all UI elements
+        self.scaled_dimensions = {
+            'padding_xlarge': self.scale_value(30),
+            'padding_large': self.scale_value(20),
+            'padding_medium': self.scale_value(15),
+            'padding_small': self.scale_value(10),
+            'padding_tiny': self.scale_value(5),
+            'button_padding_x': self.scale_value(30),
+            'button_padding_y': self.scale_value(12),
+            'border_width': max(1, self.scale_value(1)),
+            'card_padding': self.scale_value(20),
+            'section_spacing': self.scale_value(15),
+            'log_height': self.scale_value(150, min_val=100),  # Log area height
+        }
+        
+        # Calculate scaled fonts
+        self.fonts = {
+            'header_title': ('Segoe UI', self.scale_value(26, min_val=18), 'bold'),
+            'header_subtitle': ('Segoe UI', self.scale_value(13, min_val=10)),
+            'section_title': ('Segoe UI', self.scale_value(15, min_val=12), 'bold'),
+            'label': ('Segoe UI', self.scale_value(13, min_val=10), 'bold'),
+            'normal': ('Segoe UI', self.scale_value(12, min_val=9)),
+            'small': ('Segoe UI', self.scale_value(11, min_val=8)),
+            'console': ('Consolas', self.scale_value(11, min_val=8)),
+            'button': ('Segoe UI', self.scale_value(12, min_val=9), 'bold'),
+        }
+
+    def scale_value(self, value, min_val=None):
+        """Scale a value based on the scaling factor"""
+        scaled = int(value * self.scale_factor)
+        if min_val is not None:
+            return max(min_val, scaled)
+        return scaled
+
     def init_translations(self):
         """Initialize all UI text translations"""
         self.translations = {
@@ -70,15 +132,15 @@ class PyTorchDownloader:
                 "window_title": "PyTorch Downloader",
                 "header_title": "PyTorch & Whisper Downloader",
                 "header_subtitle": "Downloads required dependencies for audio subtitle system",
-                "system_info": "System Information:",
-                "version_selection": "PyTorch Version Selection:",
+                "system_info": "System Information",
+                "version_selection": "PyTorch Version Selection",
                 "cpu_version": "CPU Version",
                 "cuda_version": "CUDA Version (GPU acceleration)",
                 "not_detected": "Not detected",
                 "install_dir": "Install directory:",
-                "status": "Status:",
+                "status": "Status",
                 "ready": "Ready",
-                "download_log": "Download Log:",
+                "download_log": "Download Log",
                 "start_download": "🚀 Start Downloading",
                 "verify": "✔️ Verify",
                 "close": "❌ Close",
@@ -117,15 +179,15 @@ class PyTorchDownloader:
                 "window_title": "PyTorchダウンローダー",
                 "header_title": "PyTorch & Whisper ダウンローダー",
                 "header_subtitle": "音声字幕システムに必要な依存関係をダウンロードします",
-                "system_info": "システム情報:",
-                "version_selection": "PyTorchバージョン選択:",
+                "system_info": "システム情報",
+                "version_selection": "PyTorchバージョン選択",
                 "cpu_version": "CPU版",
                 "cuda_version": "CUDA版 (GPU加速)",
                 "not_detected": "未検出",
                 "install_dir": "インストールディレクトリ:",
-                "status": "状態:",
+                "status": "状態",
                 "ready": "準備完了",
-                "download_log": "ダウンロードログ:",
+                "download_log": "ダウンロードログ",
                 "start_download": "🚀 ダウンロード開始",
                 "verify": "✔️ 検証",
                 "close": "❌ 閉じる",
@@ -164,15 +226,15 @@ class PyTorchDownloader:
                 "window_title": "PyTorch 下载器",
                 "header_title": "PyTorch & Whisper 下载器",
                 "header_subtitle": "下载音频字幕系统所需的依赖项",
-                "system_info": "系统信息：",
-                "version_selection": "PyTorch版本选择：",
+                "system_info": "系统信息",
+                "version_selection": "PyTorch版本选择",
                 "cpu_version": "CPU版",
                 "cuda_version": "CUDA版 (GPU加速)",
                 "not_detected": "未检测到",
                 "install_dir": "安装目录：",
-                "status": "状态：",
+                "status": "状态",
                 "ready": "准备就绪",
-                "download_log": "下载日志：",
+                "download_log": "下载日志",
                 "start_download": "🚀 开始下载",
                 "verify": "✔️ 验证",
                 "close": "❌ 关闭",
@@ -211,15 +273,15 @@ class PyTorchDownloader:
                 "window_title": "PyTorch 다운로더",
                 "header_title": "PyTorch & Whisper 다운로더",
                 "header_subtitle": "오디오 자막 시스템에 필요한 종속성을 다운로드합니다",
-                "system_info": "시스템 정보:",
-                "version_selection": "PyTorch 버전 선택:",
+                "system_info": "시스템 정보",
+                "version_selection": "PyTorch 버전 선택",
                 "cpu_version": "CPU 버전",
                 "cuda_version": "CUDA 버전 (GPU 가속)",
                 "not_detected": "감지되지 않음",
                 "install_dir": "설치 디렉토리:",
-                "status": "상태:",
+                "status": "상태",
                 "ready": "준비 완료",
-                "download_log": "다운로드 로그:",
+                "download_log": "다운로드 로그",
                 "start_download": "🚀 다운로드 시작",
                 "verify": "✔️ 검증",
                 "close": "❌ 닫기",
@@ -295,24 +357,32 @@ class PyTorchDownloader:
         """
         self.root = tk.Tk()
         self.root.title(self.t("window_title"))
-        self.root.geometry("1200x900")
+        self.root.geometry(f"{self.window_width}x{self.window_height}")
+        
+        # Set minimum window size
+        self.root.minsize(600, 400)
 
         # ウィンドウ中央寄せ / Center the window on screen
         self.root.update_idletasks()
-        w, h = self.root.winfo_width(), self.root.winfo_height()
         ws, hs = self.root.winfo_screenwidth(), self.root.winfo_screenheight()
-        x, y = (ws // 2 - w // 2), (hs // 2 - h // 2)
-        self.root.geometry(f"{w}x{h}+{x}+{y}")
+        x, y = (ws // 2 - self.window_width // 2), (hs // 2 - self.window_height // 2)
+        self.root.geometry(f"{self.window_width}x{self.window_height}+{x}+{y}")
         self.root.configure(bg=self.colors['background'])
 
-        main = tk.Frame(self.root, bg=self.colors['background'])
-        main.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
+        # Configure ttk styles
+        self.setup_ttk_styles()
 
-        self.create_header(main)
-        self.create_config_section(main)
-        self.create_status_section(main)
-        self.create_output_section(main)
-        self.create_control_buttons(main)
+        # Main container - no scrolling
+        main_container = tk.Frame(self.root, bg=self.colors['background'])
+        main_container.pack(fill=tk.BOTH, expand=True)
+
+        # Content frame with vertical centering
+        content_frame = tk.Frame(main_container, bg=self.colors['background'])
+        content_frame.place(relx=0.5, rely=0.5, anchor='center')
+
+        # Create all sections
+        self.create_header(content_frame)
+        self.create_all_cards(content_frame)
 
         # プラットフォーム情報をGUIに表示 / Log platform in the GUI
         self.log_output(f"{self.t('platform_detected')} {self.platform_tag}")
@@ -320,51 +390,71 @@ class PyTorchDownloader:
         # ウィンドウ終了時のイベント設定 / Attach on_closing for window close
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
 
+    def setup_ttk_styles(self):
+        """Configure ttk widget styles"""
+        style = ttk.Style()
+        
+        # Configure combobox style
+        style.configure('Custom.TCombobox',
+                       fieldbackground=self.colors['surface'],
+                       background=self.colors['surface'],
+                       borderwidth=1,
+                       relief='solid')
+        
+        # Configure progressbar style
+        style.configure('Custom.Horizontal.TProgressbar',
+                       background=self.colors['accent'],
+                       troughcolor=self.colors['border'],
+                       borderwidth=0,
+                       lightcolor=self.colors['accent'],
+                       darkcolor=self.colors['accent'])
+
     def create_header(self, parent):
         """
         ヘッダ部分のUIを作成 / Create the header UI
         """
-        header = tk.Frame(parent, bg=self.colors['background'])
-        header.pack(fill=tk.X, pady=(0, 20))
+        # Header container
+        header_container = tk.Frame(parent, bg=self.colors['background'])
+        header_container.pack(fill=tk.X, pady=(0, self.scaled_dimensions['section_spacing']))
 
-        # Create a frame for the title and language selector
-        title_frame = tk.Frame(header, bg=self.colors['background'])
-        title_frame.pack(fill=tk.X)
+        # Title and language in same row
+        header_row = tk.Frame(header_container, bg=self.colors['background'])
+        header_row.pack(fill=tk.X)
 
-        # Left side - titles
-        left_frame = tk.Frame(title_frame, bg=self.colors['background'])
-        left_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        # Title section (center)
+        title_frame = tk.Frame(header_row, bg=self.colors['background'])
+        title_frame.pack(expand=True)
 
         self.header_title_label = tk.Label(
-            left_frame,
+            title_frame,
             text=self.t("header_title"),
-            font=('Yu Gothic', 20, 'bold'),
+            font=self.fonts['header_title'],
             fg=self.colors['primary'],
             bg=self.colors['background']
         )
         self.header_title_label.pack()
 
         self.header_subtitle_label = tk.Label(
-            left_frame,
+            title_frame,
             text=self.t("header_subtitle"),
-            font=('Segoe UI', 11),
+            font=self.fonts['header_subtitle'],
             fg=self.colors['text_light'],
             bg=self.colors['background']
         )
-        self.header_subtitle_label.pack(pady=(5, 0))
+        self.header_subtitle_label.pack(pady=(self.scaled_dimensions['padding_tiny'], 0))
 
-        # Right side - language selector
-        lang_frame = tk.Frame(title_frame, bg=self.colors['background'])
-        lang_frame.pack(side=tk.RIGHT, padx=10)
+        # Language selector (right)
+        lang_frame = tk.Frame(header_row, bg=self.colors['background'])
+        lang_frame.pack(side=tk.RIGHT, anchor='ne')
 
         self.lang_label = tk.Label(
             lang_frame,
             text=self.t("language"),
-            font=('Yu Gothic', 10),
-            fg=self.colors['text'],
+            font=self.fonts['small'],
+            fg=self.colors['text_light'],
             bg=self.colors['background']
         )
-        self.lang_label.pack(side=tk.LEFT, padx=(0, 5))
+        self.lang_label.pack(side=tk.LEFT, padx=(0, self.scaled_dimensions['padding_tiny']))
 
         # Language display names
         self.language_display = {
@@ -380,11 +470,256 @@ class PyTorchDownloader:
             textvariable=self.language_var,
             values=list(self.language_display.values()),
             state="readonly",
-            width=10,
-            font=('Segoe UI', 10)
+            width=self.scale_value(14),
+            font=self.fonts['small'],
+            style='Custom.TCombobox'
         )
         self.language_combo.pack(side=tk.LEFT)
         self.language_combo.bind("<<ComboboxSelected>>", self.on_language_change)
+
+    def create_card_frame(self, parent, title=None):
+        """Create a card-style frame with shadow effect"""
+        # Card container with shadow
+        card_container = tk.Frame(parent, bg=self.colors['shadow'])
+        card_container.pack(fill=tk.X, pady=(0, self.scaled_dimensions['section_spacing']), 
+                           padx=self.scaled_dimensions['padding_medium'])
+        
+        # Card frame
+        card = tk.Frame(card_container, bg=self.colors['surface'])
+        card.pack(fill=tk.BOTH, padx=2, pady=2)
+        
+        # Inner frame with padding
+        inner = tk.Frame(card, bg=self.colors['surface'])
+        inner.pack(fill=tk.BOTH, padx=self.scaled_dimensions['card_padding'], 
+                  pady=self.scaled_dimensions['card_padding'])
+        
+        if title:
+            # Store title label reference for language updates
+            title_label = tk.Label(
+                inner,
+                text=title,
+                font=self.fonts['section_title'],
+                fg=self.colors['primary'],
+                bg=self.colors['surface']
+            )
+            title_label.pack(anchor=tk.W, pady=(0, self.scaled_dimensions['padding_medium']))
+            
+            # Store reference for updates
+            if not hasattr(self, 'card_titles'):
+                self.card_titles = {}
+            self.card_titles[title] = title_label
+        
+        return inner
+
+    def create_all_cards(self, parent):
+        """Create all content cards in a single container"""
+        # Cards container
+        cards_container = tk.Frame(parent, bg=self.colors['background'])
+        cards_container.pack(fill=tk.BOTH, expand=True)
+
+        # Create horizontal layout for system info and version selection
+        top_row = tk.Frame(cards_container, bg=self.colors['background'])
+        top_row.pack(fill=tk.X)
+
+        # Left column
+        left_col = tk.Frame(top_row, bg=self.colors['background'])
+        left_col.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        # Right column
+        right_col = tk.Frame(top_row, bg=self.colors['background'])
+        right_col.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        # System Information (left)
+        self.create_system_info_card(left_col)
+
+        # PyTorch Version Selection (right)
+        self.create_version_selection_card(right_col)
+
+        # Status card (full width)
+        self.create_status_card(cards_container)
+
+        # Download Log card (full width)
+        self.create_log_card(cards_container)
+
+        # Control buttons (centered)
+        self.create_control_buttons(cards_container)
+
+    def create_system_info_card(self, parent):
+        """Create system information card"""
+        inner = self.create_card_frame(parent, self.t("system_info"))
+        
+        ver = sys.getwindowsversion().major
+        os_name = f"Windows {11 if (ver == 10 and sys.getwindowsversion().build >= 22000) else ver}"
+
+        info_frame = tk.Frame(inner, bg=self.colors['surface'])
+        info_frame.pack()
+
+        info_items = [
+            f"OS: {os_name}",
+            f"Python: {sys.version.split()[0]}",
+            f"Architecture: {platform.machine()}",
+            f"Platform: {self.platform_tag}"
+        ]
+
+        for item in info_items:
+            label = tk.Label(
+                info_frame,
+                text=item,
+                font=self.fonts['console'],
+                fg=self.colors['text_light'],
+                bg=self.colors['surface']
+            )
+            label.pack(anchor=tk.W, pady=(0, self.scaled_dimensions['padding_tiny']))
+
+    def create_version_selection_card(self, parent):
+        """Create PyTorch version selection card"""
+        inner = self.create_card_frame(parent, self.t("version_selection"))
+        
+        self.version_var = tk.StringVar(value="cpu")
+        
+        # Radio buttons frame
+        radio_frame = tk.Frame(inner, bg=self.colors['surface'])
+        radio_frame.pack()
+        
+        self.cpu_radio = tk.Radiobutton(
+            radio_frame,
+            text=self.t("cpu_version"),
+            variable=self.version_var,
+            value="cpu",
+            font=self.fonts['normal'],
+            bg=self.colors['surface'],
+            fg=self.colors['text'],
+            activebackground=self.colors['surface'],
+            selectcolor=self.colors['surface']
+        )
+        self.cpu_radio.pack(anchor=tk.W, pady=self.scaled_dimensions['padding_tiny'])
+
+        cuda_ok = self.check_cuda_available()
+        cuda_text = self.t("cuda_version")
+        if not cuda_ok:
+            cuda_text += f" - {self.t('not_detected')}"
+
+        self.cuda_radio = tk.Radiobutton(
+            radio_frame,
+            text=cuda_text,
+            variable=self.version_var,
+            value="cuda",
+            font=self.fonts['normal'],
+            bg=self.colors['surface'],
+            fg=self.colors['text'] if cuda_ok else self.colors['text_light'],
+            state=tk.NORMAL if cuda_ok else tk.DISABLED,
+            activebackground=self.colors['surface'],
+            selectcolor=self.colors['surface']
+        )
+        self.cuda_radio.pack(anchor=tk.W, pady=self.scaled_dimensions['padding_tiny'])
+
+        # Install directory
+        self.install_dir_label = tk.Label(
+            inner,
+            text=f"{self.t('install_dir')} {self.target_dir.absolute()}",
+            font=self.fonts['small'],
+            fg=self.colors['text_light'],
+            bg=self.colors['surface'],
+            wraplength=self.scale_value(300)
+        )
+        self.install_dir_label.pack(pady=(self.scaled_dimensions['padding_medium'], 0))
+
+    def create_status_card(self, parent):
+        """Create status card"""
+        inner = self.create_card_frame(parent, self.t("status"))
+        
+        # Status text
+        self.status_label = tk.Label(
+            inner,
+            text=self.t("ready"),
+            font=self.fonts['normal'],
+            fg=self.colors['success'],
+            bg=self.colors['surface']
+        )
+        self.status_label.pack()
+        
+        # Progress bar
+        self.progress_bar = ttk.Progressbar(
+            inner, 
+            mode='indeterminate',
+            style='Custom.Horizontal.TProgressbar'
+        )
+        self.progress_bar.pack(fill=tk.X, pady=(self.scaled_dimensions['padding_small'], 0))
+
+    def create_log_card(self, parent):
+        """Create download log card"""
+        inner = self.create_card_frame(parent, self.t("download_log"))
+        
+        # Log text area with border
+        log_frame = tk.Frame(inner, bg=self.colors['border'])
+        log_frame.pack(fill=tk.BOTH, expand=True)
+        
+        # Calculate log height based on screen size
+        log_lines = max(6, int(10 * self.scale_factor))
+        
+        self.output_text = scrolledtext.ScrolledText(
+            log_frame,
+            height=log_lines,
+            font=self.fonts['console'],
+            bg=self.colors['surface'],
+            fg=self.colors['text'],
+            wrap=tk.WORD,
+            relief='flat',
+            bd=0
+        )
+        self.output_text.pack(fill=tk.BOTH, expand=True, padx=1, pady=1)
+
+    def create_control_buttons(self, parent):
+        """Create control buttons with centered layout"""
+        button_container = tk.Frame(parent, bg=self.colors['background'])
+        button_container.pack(pady=(0, self.scaled_dimensions['padding_large']))
+        
+        button_frame = tk.Frame(button_container, bg=self.colors['background'])
+        button_frame.pack()
+        
+        # Button styling
+        button_config = {
+            'font': self.fonts['button'],
+            'padx': self.scaled_dimensions['button_padding_x'],
+            'pady': self.scaled_dimensions['button_padding_y'],
+            'bd': 0,
+            'cursor': 'hand2',
+            'relief': 'flat'
+        }
+        
+        self.download_btn = tk.Button(
+            button_frame,
+            text=self.t("start_download"),
+            command=self.start_download,
+            bg=self.colors['accent'],
+            fg='white',
+            activebackground=self.colors['primary'],
+            **button_config
+        )
+        self.download_btn.pack(side=tk.LEFT, padx=self.scaled_dimensions['padding_small'])
+
+        self.verify_btn = tk.Button(
+            button_frame,
+            text=self.t("verify"),
+            command=self.verify_installation,
+            bg=self.colors['success'],
+            fg='white',
+            state=tk.DISABLED,
+            activebackground='#8FAA7B',
+            **button_config
+        )
+        self.verify_btn.pack(side=tk.LEFT, padx=self.scaled_dimensions['padding_small'])
+
+        self.close_btn = tk.Button(
+            button_frame,
+            text=self.t("close"),
+            command=self.on_closing,
+            bg=self.colors['danger'],
+            fg='white',
+            activebackground='#A85757',
+            **button_config
+        )
+        self.close_btn.pack(side=tk.LEFT, padx=self.scaled_dimensions['padding_small'])
 
     def on_language_change(self, event=None):
         """Handle language change event"""
@@ -406,9 +741,35 @@ class PyTorchDownloader:
         self.header_subtitle_label.config(text=self.t("header_subtitle"))
         self.lang_label.config(text=self.t("language"))
         
-        # Update config section
-        self.system_info_label.config(text=self.t("system_info"))
-        self.version_label.config(text=self.t("version_selection"))
+        # Update card titles
+        if hasattr(self, 'card_titles'):
+            title_mapping = {
+                "System Information": "system_info",
+                "システム情報": "system_info",
+                "系统信息": "system_info",
+                "시스템 정보": "system_info",
+                "PyTorch Version Selection": "version_selection",
+                "PyTorchバージョン選択": "version_selection",
+                "PyTorch版本选择": "version_selection",
+                "PyTorch 버전 선택": "version_selection",
+                "Status": "status",
+                "状態": "status",
+                "状态": "status",
+                "상태": "status",
+                "Download Log": "download_log",
+                "ダウンロードログ": "download_log",
+                "下载日志": "download_log",
+                "다운로드 로그": "download_log"
+            }
+            
+            for title_label in self.card_titles.values():
+                current_text = title_label.cget("text")
+                for old_title, key in title_mapping.items():
+                    if current_text == old_title:
+                        title_label.config(text=self.t(key))
+                        break
+        
+        # Update radio buttons
         self.cpu_radio.config(text=self.t("cpu_version"))
         
         cuda_text = self.t("cuda_version")
@@ -418,223 +779,14 @@ class PyTorchDownloader:
         
         self.install_dir_label.config(text=f"{self.t('install_dir')} {self.target_dir.absolute()}")
         
-        # Update status section
-        self.status_label_prefix.config(text=self.t("status"))
+        # Update status
         if self.status_label.cget("text") in ["準備完了", "Ready", "准备就绪", "준비 완료"]:
             self.status_label.config(text=self.t("ready"))
-        
-        # Update output section
-        self.log_label.config(text=self.t("download_log"))
         
         # Update buttons
         self.download_btn.config(text=self.t("start_download"))
         self.verify_btn.config(text=self.t("verify"))
         self.close_btn.config(text=self.t("close"))
-
-    def create_config_section(self, parent):
-        """
-        システム情報・PyTorchのバージョン選択などを行う設定セクション
-        Configuration section for system info & PyTorch version selection
-        """
-        frame = tk.Frame(parent, bg=self.colors['surface'], relief='solid', bd=1)
-        frame.pack(fill=tk.X, pady=(0, 15))
-
-        inner = tk.Frame(frame, bg=self.colors['surface'])
-        inner.pack(fill=tk.X, padx=15, pady=15)
-
-        # ---- System Info ----
-        self.system_info_label = tk.Label(
-            inner,
-            text=self.t("system_info"),
-            font=('Yu Gothic', 12, 'bold'),
-            fg=self.colors['text'],
-            bg=self.colors['surface']
-        )
-        self.system_info_label.pack(anchor=tk.W)
-
-        ver = sys.getwindowsversion().major
-        # Windows 11 / 10 判断 (heuristics for Windows version)
-        os_name = f"Windows {11 if (ver == 10 and sys.getwindowsversion().build >= 22000) else ver}"
-
-        info = (
-            f"OS: {os_name}\n"
-            f"Python: {sys.version.split()[0]}\n"
-            f"Arch: {platform.machine()}\n"
-            f"Platform Tag: {self.platform_tag}"
-        )
-
-        tk.Label(
-            inner,
-            text=info,
-            font=('Consolas', 10),
-            fg=self.colors['text_light'],
-            bg=self.colors['surface'],
-            justify=tk.LEFT
-        ).pack(anchor=tk.W, pady=(0, 15))
-
-        # ---- PyTorch Version Choice ----
-        self.version_label = tk.Label(
-            inner,
-            text=self.t("version_selection"),
-            font=('Yu Gothic', 12, 'bold'),
-            fg=self.colors['text'],
-            bg=self.colors['surface']
-        )
-        self.version_label.pack(anchor=tk.W)
-
-        self.version_var = tk.StringVar(value="cpu")
-        vf = tk.Frame(inner, bg=self.colors['surface'])
-        vf.pack(anchor=tk.W, pady=(0, 10))
-
-        self.cpu_radio = tk.Radiobutton(
-            vf,
-            text=self.t("cpu_version"),
-            variable=self.version_var,
-            value="cpu",
-            font=('Yu Gothic', 10),
-            bg=self.colors['surface'],
-            fg=self.colors['text']
-        )
-        self.cpu_radio.pack(side=tk.LEFT, padx=(0, 20))
-
-        cuda_ok = self.check_cuda_available()
-        cuda_text = self.t("cuda_version")
-        if not cuda_ok:
-            cuda_text += f" - {self.t('not_detected')}"
-
-        self.cuda_radio = tk.Radiobutton(
-            vf,
-            text=cuda_text,
-            variable=self.version_var,
-            value="cuda",
-            font=('Yu Gothic', 10),
-            bg=self.colors['surface'],
-            fg=self.colors['text'] if cuda_ok else self.colors['text_light'],
-            state=tk.NORMAL if cuda_ok else tk.DISABLED
-        )
-        self.cuda_radio.pack(side=tk.LEFT)
-
-        self.install_dir_label = tk.Label(
-            inner,
-            text=f"{self.t('install_dir')} {self.target_dir.absolute()}",
-            font=('Yu Gothic', 10),
-            fg=self.colors['text_light'],
-            bg=self.colors['surface']
-        )
-        self.install_dir_label.pack(anchor=tk.W)
-
-    def create_status_section(self, parent):
-        """
-        ダウンロードの進捗やステータスを表示 / Displays download progress and status
-        """
-        frame = tk.Frame(parent, bg=self.colors['surface'], relief='solid', bd=1)
-        frame.pack(fill=tk.X, pady=(0, 15))
-
-        inner = tk.Frame(frame, bg=self.colors['surface'])
-        inner.pack(fill=tk.X, padx=15, pady=10)
-
-        row = tk.Frame(inner, bg=self.colors['surface'])
-        row.pack(fill=tk.X)
-
-        self.status_label_prefix = tk.Label(
-            row,
-            text=self.t("status"),
-            font=('Yu Gothic', 11, 'bold'),
-            fg=self.colors['text'],
-            bg=self.colors['surface']
-        )
-        self.status_label_prefix.pack(side=tk.LEFT)
-
-        self.status_label = tk.Label(
-            row,
-            text=self.t("ready"),
-            font=('Yu Gothic', 11),
-            fg=self.colors['text_light'],
-            bg=self.colors['surface']
-        )
-        self.status_label.pack(side=tk.RIGHT)
-
-        self.progress_bar = ttk.Progressbar(inner, mode='indeterminate')
-        self.progress_bar.pack(fill=tk.X)
-
-    def create_output_section(self, parent):
-        """
-        ダウンロードログを表示 / Section for showing download logs
-        """
-        frame = tk.Frame(parent, bg=self.colors['surface'], relief='solid', bd=1)
-        frame.pack(fill=tk.BOTH, expand=True, pady=(0, 15))
-
-        inner = tk.Frame(frame, bg=self.colors['surface'])
-        inner.pack(fill=tk.BOTH, expand=True, padx=15, pady=10)
-
-        self.log_label = tk.Label(
-            inner,
-            text=self.t("download_log"),
-            font=('Yu Gothic', 11, 'bold'),
-            fg=self.colors['text'],
-            bg=self.colors['surface']
-        )
-        self.log_label.pack(anchor=tk.W)
-
-        self.output_text = scrolledtext.ScrolledText(
-            inner,
-            height=10,
-            font=('Consolas', 9),
-            bg=self.colors['surface'],
-            fg=self.colors['text'],
-            wrap=tk.WORD
-        )
-        self.output_text.pack(fill=tk.BOTH, expand=True)
-
-    def create_control_buttons(self, parent):
-        """
-        ダウンロード開始・検証・終了ボタン / Buttons to start download, verify, and close
-        """
-        frame = tk.Frame(parent, bg=self.colors['background'])
-        frame.pack(fill=tk.X)
-
-        self.download_btn = tk.Button(
-            frame,
-            text=self.t("start_download"),
-            command=self.start_download,
-            font=('Yu Gothic', 11, 'bold'),
-            bg=self.colors['accent'],
-            fg='white',
-            padx=20,
-            pady=10,
-            bd=0,
-            cursor='hand2'
-        )
-        self.download_btn.pack(side=tk.LEFT, padx=(0, 10))
-
-        self.verify_btn = tk.Button(
-            frame,
-            text=self.t("verify"),
-            command=self.verify_installation,
-            font=('Yu Gothic', 11),
-            bg=self.colors['success'],
-            fg='white',
-            padx=20,
-            pady=10,
-            bd=0,
-            cursor='hand2',
-            state=tk.DISABLED
-        )
-        self.verify_btn.pack(side=tk.LEFT, padx=(0, 10))
-
-        self.close_btn = tk.Button(
-            frame,
-            text=self.t("close"),
-            command=self.on_closing,
-            font=('Yu Gothic', 11),
-            bg=self.colors['danger'],
-            fg='white',
-            padx=20,
-            pady=10,
-            bd=0,
-            cursor='hand2'
-        )
-        self.close_btn.pack(side=tk.RIGHT)
 
     def check_cuda_available(self):
         """

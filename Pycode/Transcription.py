@@ -607,7 +607,6 @@ class AudioSubtitleSystem:
         if not WHISPER_AVAILABLE:
             self.create_responsive_dependency_warning(main)
             
-        self.create_responsive_parameter_button(main)
         self.create_responsive_model_section(main)
         self.create_responsive_topic_section(main)
         self.create_responsive_status_section(main)
@@ -675,31 +674,22 @@ class AudioSubtitleSystem:
         hf = tk.Frame(parent, bg=self.colors['background'])
         hf.pack(fill=tk.X, pady=(0, self.scaled_dimensions['padding_large']))
         
-        # Create a frame for the title and language selector
+        # Create a frame for the subtitle and language selector
         title_frame = tk.Frame(hf, bg=self.colors['background'])
         title_frame.pack(fill=tk.X)
         
-        # Left side - titles
+        # Left side - subtitle only
         left_frame = tk.Frame(title_frame, bg=self.colors['background'])
         left_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        
-        self.header_title_label = tk.Label(
-            left_frame, 
-            text=self.t("header_title"),
-            font=('Yu Gothic', self.scaled_fonts['title'], 'bold'),
-            fg=self.colors['primary'], 
-            bg=self.colors['background']
-        )
-        self.header_title_label.pack()
         
         self.header_subtitle_label = tk.Label(
             left_frame, 
             text=self.t("header_subtitle"),
-            font=('Segoe UI', self.scaled_fonts['normal']),
-            fg=self.colors['text_light'], 
+            font=('Segoe UI', self.scaled_fonts['header'], 'bold'),
+            fg=self.colors['text'], 
             bg=self.colors['background']
         )
-        self.header_subtitle_label.pack(pady=(3, 0))
+        self.header_subtitle_label.pack()
         
         # Right side - language selector
         lang_frame = tk.Frame(title_frame, bg=self.colors['background'])
@@ -744,14 +734,26 @@ class AudioSubtitleSystem:
                    padx=self.scaled_dimensions['padding_large'], 
                    pady=self.scaled_dimensions['padding_medium'])
         
+        # Header row with title on left and parameter button on right
+        header_row = tk.Frame(inner, bg=self.colors['surface'])
+        header_row.pack(fill=tk.X, pady=(0, self.scaled_dimensions['padding_small'] // 2))
+        
         self.file_section_label = tk.Label(
-            inner, 
+            header_row, 
             text=self.t("audio_file_selection"),
             font=('Yu Gothic', self.scaled_fonts['header'], 'bold'),
             fg=self.colors['text'], 
             bg=self.colors['surface']
         )
-        self.file_section_label.pack(anchor=tk.W, pady=(0, self.scaled_dimensions['padding_small'] // 2))
+        self.file_section_label.pack(side=tk.LEFT)
+        
+        self.param_btn = ttk.Button(
+            header_row,
+            text=self.t("adjust_parameters"),
+            command=self.open_parameter_window,
+            style='Primary.TButton'
+        )
+        self.param_btn.pack(side=tk.RIGHT)
         
         btnf = tk.Frame(inner, bg=self.colors['surface'])
         btnf.pack(fill=tk.X, pady=(0, self.scaled_dimensions['padding_small']))
@@ -782,18 +784,6 @@ class AudioSubtitleSystem:
         )
         self.file_path_label.pack(anchor=tk.W)
 
-    def create_responsive_parameter_button(self, parent):
-        """Add responsive 'Adjust Parameters' button"""
-        pf = tk.Frame(parent, bg=self.colors['background'])
-        pf.pack(pady=(self.scaled_dimensions['padding_small'] // 2, 
-                      self.scaled_dimensions['padding_large']))
-        self.param_btn = ttk.Button(
-            pf,
-            text=self.t("adjust_parameters"),
-            command=self.open_parameter_window,
-            style='Primary.TButton'
-        )
-        self.param_btn.pack()
 
     def create_responsive_dependency_warning(self, parent):
         """Create responsive warning section for missing dependencies"""
@@ -1168,7 +1158,6 @@ class AudioSubtitleSystem:
         self.root.title(self.t("window_title"))
         
         # Update header
-        self.header_title_label.config(text=self.t("header_title"))
         self.header_subtitle_label.config(text=self.t("header_subtitle"))
         self.lang_label.config(text=self.t("language"))
         
@@ -1180,8 +1169,7 @@ class AudioSubtitleSystem:
             self.file_path_label.config(text=self.t("no_file_selected"))
         
         # Update parameter button
-        if hasattr(self, 'param_btn'):
-            self.param_btn.config(text=self.t("adjust_parameters"))
+        self.param_btn.config(text=self.t("adjust_parameters"))
         
         # Update dependency warning if present
         if hasattr(self, 'dep_warning_label'):
@@ -1402,7 +1390,23 @@ class AudioSubtitleSystem:
             self.update_status(self.t("loading_model").format(model_size), self.colors['accent'])
             self.append_status_message(self.t("loading").format(model_size))
             
-            model = whisper.load_model(model_size, device=self.device)
+            # Save original stdout/stderr
+            orig_stdout = sys.stdout
+            orig_stderr = sys.stderr
+            
+            # Create a simple capture for model loading/downloading
+            try:
+                # Redirect output to avoid write errors during download
+                sys.stdout = io.StringIO()
+                sys.stderr = io.StringIO()
+                
+                # Load the model
+                model = whisper.load_model(model_size, device=self.device)
+                
+            finally:
+                # Always restore stdout/stderr
+                sys.stdout = orig_stdout
+                sys.stderr = orig_stderr
             
             self.is_downloading = False
             self.is_loading_model = False
