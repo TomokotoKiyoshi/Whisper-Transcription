@@ -120,7 +120,7 @@ class ProgressCapture(io.StringIO):
                 self.text_callback(start_time_str, end_time_str, segment_text)
 
 class AudioSubtitleSystem:
-    """Audio Transcription System with multilingual support"""
+    """Audio Transcription System with multilingual support and responsive design"""
     def __init__(self):
         # State management
         self.current_file = None
@@ -170,7 +170,8 @@ class AudioSubtitleSystem:
         # Check for PyTorch/Whisper availability
         self.check_dependencies()
         
-        self.setup_gui()
+        # Setup GUI with responsive design
+        self.setup_responsive_gui()
 
     def init_translations(self):
         """Initialize all UI text translations"""
@@ -509,210 +510,170 @@ class AudioSubtitleSystem:
             else:
                 self.device = "cpu"
 
-    def setup_gui(self):
+    def calculate_scaling(self):
+        """Calculate scaling factors based on screen size"""
+        screen_width = self.root.winfo_screenwidth()
+        screen_height = self.root.winfo_screenheight()
+        
+        # Base dimensions for scaling (designed for 1920x1080)
+        base_width = 1920
+        base_height = 1080
+        
+        # Calculate scaling factors
+        self.scale_x = screen_width / base_width
+        self.scale_y = screen_height / base_height
+        self.scale = min(self.scale_x, self.scale_y)  # Use minimum to maintain aspect ratio
+        
+        # Ensure minimum scaling
+        self.scale = max(self.scale, 0.75)
+        
+        # Font scaling
+        self.base_font_sizes = {
+            'title': 22,
+            'header': 13,
+            'normal': 11,
+            'small': 10
+        }
+        
+        self.scaled_fonts = {}
+        for key, size in self.base_font_sizes.items():
+            self.scaled_fonts[key] = max(int(size * self.scale), 8)
+        
+        # Widget dimensions
+        self.scaled_dimensions = {
+            'window_width': int(1000 * self.scale),
+            'window_height': int(1000 * self.scale),
+            'min_width': int(800 * self.scale),
+            'min_height': int(700 * self.scale),
+            'padding_large': int(15 * self.scale),
+            'padding_medium': int(12 * self.scale),
+            'padding_small': int(8 * self.scale),
+            'button_padding_x': int(20 * self.scale),
+            'button_padding_y': int(10 * self.scale),
+            'entry_padding': int(12 * self.scale),
+            'progress_length': int(500 * self.scale),
+            'output_height': int(8 * self.scale),
+            'combo_width': int(30 * self.scale),
+            'lang_combo_width': int(10 * self.scale)
+        }
+
+    def setup_responsive_gui(self):
         self.root = tk.Tk()
         self.root.title(self.t("window_title"))
-        self.root.geometry("1000x1000")
+        
+        # Calculate scaling before setting up GUI
+        self.calculate_scaling()
+        
+        # Set window size based on screen dimensions
+        window_width = self.scaled_dimensions['window_width']
+        window_height = self.scaled_dimensions['window_height']
+        min_width = self.scaled_dimensions['min_width']
+        min_height = self.scaled_dimensions['min_height']
+        
+        # Set minimum window size
+        self.root.minsize(min_width, min_height)
+        
+        # Center window on screen
+        self.root.geometry(f"{window_width}x{window_height}")
         self.root.update_idletasks()
-        w = self.root.winfo_width()
-        h = self.root.winfo_height()
+        
         ws = self.root.winfo_screenwidth()
         hs = self.root.winfo_screenheight()
-        x = (ws // 2) - (w // 2)
-        y = (hs // 2) - (h // 2) - 20
-        self.root.geometry(f"{w}x{h}+{x}+{y}")
+        x = (ws // 2) - (window_width // 2)
+        y = (hs // 2) - (window_height // 2) - 20
+        self.root.geometry(f"{window_width}x{window_height}+{x}+{y}")
+        
         self.root.configure(bg=self.colors['background'])
+        
+        # Configure grid weights for responsive layout
+        self.root.grid_rowconfigure(0, weight=1)
+        self.root.grid_columnconfigure(0, weight=1)
+        
+        # Style configuration
         self.style = ttk.Style()
         self.style.theme_use('clam')
-        self.configure_styles()
+        self.configure_responsive_styles()
 
+        # Main container with responsive padding
         main = tk.Frame(self.root, bg=self.colors['background'])
-        main.pack(fill=tk.BOTH, expand=True, padx=15, pady=15)
+        main.pack(fill=tk.BOTH, expand=True, 
+                  padx=self.scaled_dimensions['padding_large'], 
+                  pady=self.scaled_dimensions['padding_large'])
 
-        self.create_header(main)
-        self.create_file_section(main)
+        # Create responsive sections
+        self.create_responsive_header(main)
+        self.create_responsive_file_section(main)
         
         if not WHISPER_AVAILABLE:
-            self.create_dependency_warning(main)
+            self.create_responsive_dependency_warning(main)
             
-        self.create_parameter_button(main)
-        self.create_model_section(main)
-        self.create_topic_section(main)
-        self.create_status_section(main)
-        self.create_transcription_output_section(main)
-        self.create_save_section(main)
+        self.create_responsive_parameter_button(main)
+        self.create_responsive_model_section(main)
+        self.create_responsive_topic_section(main)
+        self.create_responsive_status_section(main)
+        self.create_responsive_transcription_output_section(main)
+        self.create_responsive_save_section(main)
 
+        # Bind resize event for dynamic updates
+        self.root.bind('<Configure>', self.on_window_resize)
+        
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
         self.process_message_queue()
         self.update_status(self.t("waiting_to_start"), self.colors['text_light'])
+
+    def on_window_resize(self, event=None):
+        """Handle window resize events"""
+        if hasattr(self, '_last_resize_time'):
+            # Debounce resize events
+            if time.time() - self._last_resize_time < 0.1:
+                return
+        self._last_resize_time = time.time()
+
+    def configure_responsive_styles(self):
+        """Configure styles with responsive dimensions"""
+        button_pad_x = self.scaled_dimensions['button_padding_x']
+        button_pad_y = self.scaled_dimensions['button_padding_y']
         
-    def create_parameter_button(self, parent):
-        """Add 'Adjust Parameters' button"""
-        pf = tk.Frame(parent, bg=self.colors['background'])
-        pf.pack(pady=(5, 15))
-        self.param_btn = ttk.Button(
-            pf,
-            text=self.t("adjust_parameters"),
-            command=self.open_parameter_window,
-            style='Primary.TButton'
-        )
-        self.param_btn.pack()
-            
-    def open_parameter_window(self):
-        """Open parameter settings window"""
-        win = tk.Toplevel(self.root)
-        win.title(self.t("parameter_settings"))
-        win.geometry("500x460")
-        win.configure(bg=self.colors['surface'])
-
-        # Temperature
-        tk.Label(win, text="Temperature:",
-                 bg=self.colors['surface'], fg=self.colors['text']).pack(anchor=tk.W, padx=15, pady=(15,0))
-        self.temp_var = tk.DoubleVar(value=0.0)
-        tk.Scale(win, from_=0.0, to=1.0, resolution=0.01, orient=tk.HORIZONTAL,
-                 variable=self.temp_var).pack(fill=tk.X, padx=15)
-
-        # best_of
-        tk.Label(win, text="best_of:",
-                 bg=self.colors['surface'], fg=self.colors['text']).pack(anchor=tk.W, padx=15, pady=(15,0))
-        self.best_of_var = tk.IntVar(value=10)
-        tk.Spinbox(win, from_=1, to=10, textvariable=self.best_of_var).pack(fill=tk.X, padx=15)
-
-        # beam_size
-        tk.Label(win, text="beam_size:",
-                 bg=self.colors['surface'], fg=self.colors['text']).pack(anchor=tk.W, padx=15, pady=(15,0))
-        self.beam_var = tk.IntVar(value=10)
-        tk.Spinbox(win, from_=1, to=20, textvariable=self.beam_var).pack(fill=tk.X, padx=15)
-
-        # logprob_threshold
-        tk.Label(win, text="logprob_threshold:",
-                 bg=self.colors['surface'], fg=self.colors['text']).pack(anchor=tk.W, padx=15, pady=(15,0))
-        self.logp_var = tk.DoubleVar(value=-1)
-        tk.Scale(win, from_=-5.0, to=0.0, resolution=0.1, orient=tk.HORIZONTAL,
-                 variable=self.logp_var).pack(fill=tk.X, padx=15)
-
-        # no_speech_threshold
-        tk.Label(win, text="no_speech_threshold:",
-                 bg=self.colors['surface'], fg=self.colors['text']).pack(anchor=tk.W, padx=15, pady=(15,0))
-        self.nospeech_var = tk.DoubleVar(value=0.5)
-        tk.Scale(win, from_=0.0, to=1.0, resolution=0.01, orient=tk.HORIZONTAL,
-                 variable=self.nospeech_var).pack(fill=tk.X, padx=15)
-
-        # condition_on_previous_text
-        self.cond_prev_var = tk.BooleanVar(value=False)
-        tk.Checkbutton(win,
-                       text="condition_on_previous_text",
-                       variable=self.cond_prev_var,
-                       bg=self.colors['surface'],
-                       fg=self.colors['text']).pack(anchor=tk.W, padx=15, pady=(15,0))
-
-        # OK button
-        def apply_params():
-            self.whisper_params = {
-                "temperature": self.temp_var.get(),
-                "best_of": self.best_of_var.get(),
-                "beam_size": self.beam_var.get(),
-                "logprob_threshold": self.logp_var.get(),
-                "no_speech_threshold": self.nospeech_var.get(),
-                "condition_on_previous_text": self.cond_prev_var.get(),
-            }
-            win.destroy()
-            self.append_status_message(f"{self.t('parameters_updated')} {self.whisper_params}")
-
-        ttk.Button(win, text=self.t("ok"), command=apply_params, style='Success.TButton')\
-            .pack(pady=20)
-
-    def create_dependency_warning(self, parent):
-        """Create warning section for missing dependencies"""
-        wf = tk.Frame(parent, bg=self.colors['warning'], relief='solid', bd=2)
-        wf.pack(fill=tk.X, pady=(0, 15))
-        inner = tk.Frame(wf, bg=self.colors['warning'])
-        inner.pack(fill=tk.X, padx=15, pady=12)
-        
-        self.dep_warning_label = tk.Label(inner, text=self.t("dependency_warning"),
-                 font=('Yu Gothic', 14, 'bold'),
-                 fg='white', bg=self.colors['warning'])
-        self.dep_warning_label.pack(anchor=tk.W, pady=(0, 6))
-        
-        self.dep_message_label = tk.Label(inner, text=self.t("dependency_message"),
-                 font=('Yu Gothic', 11),
-                 fg='white', bg=self.colors['warning'])
-        self.dep_message_label.pack(anchor=tk.W, pady=(0, 10))
-        
-        btn_frame = tk.Frame(inner, bg=self.colors['warning'])
-        btn_frame.pack(anchor=tk.W)
-        
-        self.run_downloader_btn = ttk.Button(btn_frame,
-                   text=self.t("run_downloader"),
-                   command=self.run_pytorch_downloader)
-        self.run_downloader_btn.pack(side=tk.LEFT, padx=(0, 10))
-        
-        self.recheck_btn = ttk.Button(btn_frame,
-                   text=self.t("recheck"),
-                   command=self.recheck_dependencies)
-        self.recheck_btn.pack(side=tk.LEFT)
-
-    def run_pytorch_downloader(self):
-        """Launch PyTorch downloader"""
-        downloader_path = Path("pytorch_downloader.exe")
-        if not downloader_path.exists():
-            downloader_path = Path("pytorch_downloader.py")
-        
-        if downloader_path.exists():
-            try:
-                if platform.system() == "Windows" and downloader_path.suffix == ".exe":
-                    subprocess.Popen([str(downloader_path)])
-                else:
-                    subprocess.Popen([sys.executable, str(downloader_path)])
-                messagebox.showinfo(self.t("info"), self.t("downloader_launched"))
-            except Exception as e:
-                messagebox.showerror(self.t("error"), f"{self.t('downloader_launch_failed')} {e}")
-        else:
-            messagebox.showerror(self.t("error"), self.t("downloader_not_found"))
-
-    def recheck_dependencies(self):
-        """Recheck PyTorch/Whisper availability"""
-        self.check_dependencies()
-        if WHISPER_AVAILABLE:
-            messagebox.showinfo(self.t("success"), self.t("dependencies_loaded"))
-            self.root.destroy()
-            app = AudioSubtitleSystem()
-            app.run()
-        else:
-            messagebox.showwarning(self.t("warning"), self.t("dependencies_not_installed"))
-
-    def configure_styles(self):
         self.style.configure('Primary.TButton',
                              background=self.colors['accent'],
                              foreground='white',
                              borderwidth=0,
                              focuscolor='none',
-                             padding=(20, 10))
+                             padding=(button_pad_x, button_pad_y),
+                             font=('Yu Gothic', self.scaled_fonts['normal']))
         self.style.map('Primary.TButton',
                        background=[('active', '#4C7EA3'),
                                    ('pressed', '#3E6D8F')])
+        
         self.style.configure('Success.TButton',
                              background=self.colors['success'],
                              foreground='white',
                              borderwidth=0,
                              focuscolor='none',
-                             padding=(20, 10))
+                             padding=(button_pad_x, button_pad_y),
+                             font=('Yu Gothic', self.scaled_fonts['normal']))
+        
         self.style.configure('Danger.TButton',
                              background=self.colors['danger'],
                              foreground='white',
                              borderwidth=0,
                              focuscolor='none',
-                             padding=(20, 10))
+                             padding=(button_pad_x, button_pad_y),
+                             font=('Yu Gothic', self.scaled_fonts['normal']))
+        
+        entry_pad = self.scaled_dimensions['entry_padding']
         self.style.configure('Modern.TEntry',
                              fieldbackground=self.colors['surface'],
                              borderwidth=2,
                              relief='solid',
                              bordercolor=self.colors['border'],
-                             padding=(12, 8))
+                             padding=(entry_pad, entry_pad // 2),
+                             font=('Yu Gothic', self.scaled_fonts['normal']))
 
-    def create_header(self, parent):
+    def create_responsive_header(self, parent):
+        """Create header with responsive layout"""
         hf = tk.Frame(parent, bg=self.colors['background'])
-        hf.pack(fill=tk.X, pady=(0,15))
+        hf.pack(fill=tk.X, pady=(0, self.scaled_dimensions['padding_large']))
         
         # Create a frame for the title and language selector
         title_frame = tk.Frame(hf, bg=self.colors['background'])
@@ -722,28 +683,36 @@ class AudioSubtitleSystem:
         left_frame = tk.Frame(title_frame, bg=self.colors['background'])
         left_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         
-        self.header_title_label = tk.Label(left_frame, text=self.t("header_title"),
-                 font=('Yu Gothic',22,'bold'),
-                 fg=self.colors['primary'], bg=self.colors['background'])
+        self.header_title_label = tk.Label(
+            left_frame, 
+            text=self.t("header_title"),
+            font=('Yu Gothic', self.scaled_fonts['title'], 'bold'),
+            fg=self.colors['primary'], 
+            bg=self.colors['background']
+        )
         self.header_title_label.pack()
         
-        self.header_subtitle_label = tk.Label(left_frame, text=self.t("header_subtitle"),
-                 font=('Segoe UI',11),
-                 fg=self.colors['text_light'], bg=self.colors['background'])
-        self.header_subtitle_label.pack(pady=(3,0))
+        self.header_subtitle_label = tk.Label(
+            left_frame, 
+            text=self.t("header_subtitle"),
+            font=('Segoe UI', self.scaled_fonts['normal']),
+            fg=self.colors['text_light'], 
+            bg=self.colors['background']
+        )
+        self.header_subtitle_label.pack(pady=(3, 0))
         
         # Right side - language selector
         lang_frame = tk.Frame(title_frame, bg=self.colors['background'])
-        lang_frame.pack(side=tk.RIGHT, padx=10)
+        lang_frame.pack(side=tk.RIGHT, padx=self.scaled_dimensions['padding_medium'])
         
         self.lang_label = tk.Label(
             lang_frame,
             text=self.t("language"),
-            font=('Yu Gothic', 10),
+            font=('Yu Gothic', self.scaled_fonts['small']),
             fg=self.colors['text'],
             bg=self.colors['background']
         )
-        self.lang_label.pack(side=tk.LEFT, padx=(0, 5))
+        self.lang_label.pack(side=tk.LEFT, padx=(0, self.scaled_dimensions['padding_small'] // 2))
         
         # Language display names
         self.language_display = {
@@ -759,11 +728,430 @@ class AudioSubtitleSystem:
             textvariable=self.ui_language_var,
             values=list(self.language_display.values()),
             state="readonly",
-            width=10,
-            font=('Segoe UI', 10)
+            width=self.scaled_dimensions['lang_combo_width'],
+            font=('Segoe UI', self.scaled_fonts['small'])
         )
         self.language_combo.pack(side=tk.LEFT)
         self.language_combo.bind("<<ComboboxSelected>>", self.on_language_change)
+
+    def create_responsive_file_section(self, parent):
+        """Create file section with responsive layout"""
+        ff = tk.Frame(parent, bg=self.colors['surface'], relief='solid', bd=1)
+        ff.pack(fill=tk.X, pady=(0, self.scaled_dimensions['padding_medium']))
+        
+        inner = tk.Frame(ff, bg=self.colors['surface'])
+        inner.pack(fill=tk.X, 
+                   padx=self.scaled_dimensions['padding_large'], 
+                   pady=self.scaled_dimensions['padding_medium'])
+        
+        self.file_section_label = tk.Label(
+            inner, 
+            text=self.t("audio_file_selection"),
+            font=('Yu Gothic', self.scaled_fonts['header'], 'bold'),
+            fg=self.colors['text'], 
+            bg=self.colors['surface']
+        )
+        self.file_section_label.pack(anchor=tk.W, pady=(0, self.scaled_dimensions['padding_small'] // 2))
+        
+        btnf = tk.Frame(inner, bg=self.colors['surface'])
+        btnf.pack(fill=tk.X, pady=(0, self.scaled_dimensions['padding_small']))
+        
+        self.select_file_btn = ttk.Button(
+            btnf,
+            text=self.t("select_file"),
+            command=self.select_audio_file,
+            style='Primary.TButton'
+        )
+        self.select_file_btn.pack(side=tk.LEFT, padx=(0, self.scaled_dimensions['padding_medium']))
+        
+        self.transcribe_btn = ttk.Button(
+            btnf,
+            text=self.t("start_transcription"),
+            command=self.transcribe_audio,
+            style='Success.TButton',
+            state=tk.DISABLED if not WHISPER_AVAILABLE else tk.DISABLED
+        )
+        self.transcribe_btn.pack(side=tk.LEFT)
+        
+        self.file_path_label = tk.Label(
+            inner,
+            text=self.t("no_file_selected"),
+            font=('Yu Gothic', self.scaled_fonts['small']),
+            fg=self.colors['text_light'],
+            bg=self.colors['surface']
+        )
+        self.file_path_label.pack(anchor=tk.W)
+
+    def create_responsive_parameter_button(self, parent):
+        """Add responsive 'Adjust Parameters' button"""
+        pf = tk.Frame(parent, bg=self.colors['background'])
+        pf.pack(pady=(self.scaled_dimensions['padding_small'] // 2, 
+                      self.scaled_dimensions['padding_large']))
+        self.param_btn = ttk.Button(
+            pf,
+            text=self.t("adjust_parameters"),
+            command=self.open_parameter_window,
+            style='Primary.TButton'
+        )
+        self.param_btn.pack()
+
+    def create_responsive_dependency_warning(self, parent):
+        """Create responsive warning section for missing dependencies"""
+        wf = tk.Frame(parent, bg=self.colors['warning'], relief='solid', bd=2)
+        wf.pack(fill=tk.X, pady=(0, self.scaled_dimensions['padding_large']))
+        
+        inner = tk.Frame(wf, bg=self.colors['warning'])
+        inner.pack(fill=tk.X, 
+                   padx=self.scaled_dimensions['padding_large'], 
+                   pady=self.scaled_dimensions['padding_medium'])
+        
+        self.dep_warning_label = tk.Label(
+            inner, 
+            text=self.t("dependency_warning"),
+            font=('Yu Gothic', self.scaled_fonts['header'], 'bold'),
+            fg='white', 
+            bg=self.colors['warning']
+        )
+        self.dep_warning_label.pack(anchor=tk.W, pady=(0, self.scaled_dimensions['padding_small'] // 2))
+        
+        self.dep_message_label = tk.Label(
+            inner, 
+            text=self.t("dependency_message"),
+            font=('Yu Gothic', self.scaled_fonts['normal']),
+            fg='white', 
+            bg=self.colors['warning']
+        )
+        self.dep_message_label.pack(anchor=tk.W, pady=(0, self.scaled_dimensions['padding_medium']))
+        
+        btn_frame = tk.Frame(inner, bg=self.colors['warning'])
+        btn_frame.pack(anchor=tk.W)
+        
+        self.run_downloader_btn = ttk.Button(
+            btn_frame,
+            text=self.t("run_downloader"),
+            command=self.run_pytorch_downloader
+        )
+        self.run_downloader_btn.pack(side=tk.LEFT, padx=(0, self.scaled_dimensions['padding_medium']))
+        
+        self.recheck_btn = ttk.Button(
+            btn_frame,
+            text=self.t("recheck"),
+            command=self.recheck_dependencies
+        )
+        self.recheck_btn.pack(side=tk.LEFT)
+
+    def create_responsive_model_section(self, parent):
+        """Create model section with responsive layout"""
+        mf = tk.Frame(parent, bg=self.colors['surface'], relief='solid', bd=1)
+        mf.pack(fill=tk.X, pady=(0, self.scaled_dimensions['padding_medium']))
+        
+        inner = tk.Frame(mf, bg=self.colors['surface'])
+        inner.pack(fill=tk.X, 
+                   padx=self.scaled_dimensions['padding_large'], 
+                   pady=self.scaled_dimensions['padding_medium'])
+        
+        self.model_section_label = tk.Label(
+            inner, 
+            text=self.t("whisper_model"),
+            font=('Yu Gothic', self.scaled_fonts['header'], 'bold'),
+            fg=self.colors['text'], 
+            bg=self.colors['surface']
+        )
+        self.model_section_label.pack(anchor=tk.W, pady=(0, self.scaled_dimensions['padding_small'] // 2))
+        
+        self.model_var = tk.StringVar(value="large-v3")
+        opts = ["tiny","base","small","medium","large","large-v2","large-v3","large-v3-turbo"]
+        self.model_combo = ttk.Combobox(
+            inner,
+            textvariable=self.model_var,
+            values=opts,
+            font=('Yu Gothic', self.scaled_fonts['normal']),
+            state="readonly" if WHISPER_AVAILABLE else "disabled",
+            width=self.scaled_dimensions['combo_width']
+        )
+        self.model_combo.set("large-v3")
+        self.model_combo.pack(fill=tk.X)
+
+    def create_responsive_topic_section(self, parent):
+        """Create topic section with responsive layout"""
+        tf = tk.Frame(parent, bg=self.colors['surface'], relief='solid', bd=1)
+        tf.pack(fill=tk.X, pady=(0, self.scaled_dimensions['padding_medium']))
+        
+        inner = tk.Frame(tf, bg=self.colors['surface'])
+        inner.pack(fill=tk.X, 
+                   padx=self.scaled_dimensions['padding_large'], 
+                   pady=self.scaled_dimensions['padding_medium'])
+        
+        self.keyword_label = tk.Label(
+            inner, 
+            text=self.t("keyword_optional"),
+            font=('Yu Gothic', self.scaled_fonts['header'], 'bold'),
+            fg=self.colors['text'], 
+            bg=self.colors['surface']
+        )
+        self.keyword_label.pack(anchor=tk.W, pady=(0, self.scaled_dimensions['padding_small'] // 2))
+        
+        self.topic_entry = ttk.Entry(inner, font=('Yu Gothic', self.scaled_fonts['normal']), style='Modern.TEntry')
+        self.topic_entry.pack(fill=tk.X, pady=(0, self.scaled_dimensions['padding_medium']))
+        
+        self.trans_lang_label = tk.Label(
+            inner, 
+            text=self.t("transcription_language"),
+            font=('Yu Gothic', self.scaled_fonts['header'], 'bold'),
+            fg=self.colors['text'], 
+            bg=self.colors['surface']
+        )
+        self.trans_lang_label.pack(anchor=tk.W, pady=(0, self.scaled_dimensions['padding_small'] // 2))
+        
+        self.transcription_lang_var = tk.StringVar(value="ja")
+        self.transcription_language_combo = ttk.Combobox(
+            inner,
+            textvariable=self.transcription_lang_var,
+            font=('Yu Gothic', self.scaled_fonts['normal']),
+            state="readonly" if WHISPER_AVAILABLE else "disabled",
+            width=self.scaled_dimensions['combo_width']
+        )
+        self.update_language_combo()
+        self.transcription_language_combo.pack(fill=tk.X)
+
+    def create_responsive_status_section(self, parent):
+        """Create status section with responsive layout"""
+        sf = tk.Frame(parent, bg=self.colors['surface'], relief='solid', bd=1)
+        sf.pack(fill=tk.X, pady=(0, self.scaled_dimensions['padding_medium']))
+        
+        sin = tk.Frame(sf, bg=self.colors['surface'])
+        sin.pack(fill=tk.X, 
+                 padx=self.scaled_dimensions['padding_large'], 
+                 pady=self.scaled_dimensions['padding_medium'])
+        
+        row = tk.Frame(sin, bg=self.colors['surface'])
+        row.pack(fill=tk.X, pady=(0, self.scaled_dimensions['padding_small']))
+        
+        self.status_section_label = tk.Label(
+            row, 
+            text=self.t("system_status"),
+            font=('Yu Gothic', self.scaled_fonts['normal'], 'bold'),
+            fg=self.colors['text'], 
+            bg=self.colors['surface']
+        )
+        self.status_section_label.pack(side=tk.LEFT)
+        
+        self.status_label = tk.Label(
+            row,
+            text=self.t("waiting_to_start"),
+            font=('Yu Gothic', self.scaled_fonts['normal']),
+            fg=self.colors['text_light'],
+            bg=self.colors['surface']
+        )
+        self.status_label.pack(side=tk.RIGHT)
+        
+        self.progress_bar = ttk.Progressbar(
+            sin, 
+            length=self.scaled_dimensions['progress_length'], 
+            mode='indeterminate'
+        )
+        self.progress_bar.pack(fill=tk.X, pady=(0, self.scaled_dimensions['padding_small']))
+        
+        trow = tk.Frame(sin, bg=self.colors['surface'])
+        trow.pack(fill=tk.X)
+        
+        self.elapsed_label = tk.Label(
+            trow,
+            text=f"{self.t('elapsed')} 00:00",
+            font=('Yu Gothic', self.scaled_fonts['small']),
+            fg=self.colors['text_light'],
+            bg=self.colors['surface']
+        )
+        self.elapsed_label.pack(side=tk.LEFT)
+        
+        self.duration_label = tk.Label(
+            trow,
+            text=f"{self.t('duration')} 00:00",
+            font=('Yu Gothic', self.scaled_fonts['small']),
+            fg=self.colors['text_light'],
+            bg=self.colors['surface']
+        )
+        self.duration_label.pack(side=tk.RIGHT)
+
+    def create_responsive_transcription_output_section(self, parent):
+        """Create the real-time transcription output section with responsive layout"""
+        tf = tk.Frame(parent, bg=self.colors['surface'], relief='solid', bd=1)
+        tf.pack(fill=tk.BOTH, expand=True, pady=(0, self.scaled_dimensions['padding_medium']))
+        
+        inner = tk.Frame(tf, bg=self.colors['surface'])
+        inner.pack(fill=tk.BOTH, expand=True, 
+                   padx=self.scaled_dimensions['padding_large'], 
+                   pady=self.scaled_dimensions['padding_medium'])
+        
+        header_frame = tk.Frame(inner, bg=self.colors['surface'])
+        header_frame.pack(fill=tk.X, pady=(0, self.scaled_dimensions['padding_small'] // 2))
+        
+        self.output_section_label = tk.Label(
+            header_frame, 
+            text=self.t("transcription_output"),
+            font=('Yu Gothic', self.scaled_fonts['header'], 'bold'),
+            fg=self.colors['text'], 
+            bg=self.colors['surface']
+        )
+        self.output_section_label.pack(side=tk.LEFT)
+        
+        self.clear_output_btn = ttk.Button(
+            header_frame,
+            text=self.t("clear"),
+            command=self.clear_transcription_output
+        )
+        self.clear_output_btn.pack(side=tk.RIGHT)
+        
+        # Calculate dynamic height for output text
+        output_height = max(self.scaled_dimensions['output_height'], 6)
+        
+        self.output_text = scrolledtext.ScrolledText(
+            inner,
+            height=output_height,
+            font=('Yu Gothic', self.scaled_fonts['small']),
+            bg=self.colors['surface'],
+            fg=self.colors['text'],
+            wrap=tk.WORD,
+            relief='solid',
+            borderwidth=1,
+            state=tk.DISABLED
+        )
+        self.output_text.pack(fill=tk.BOTH, expand=True)
+        
+        # Configure text tags with responsive fonts
+        self.output_text.tag_configure(
+            "timestamp", 
+            foreground=self.colors['accent'], 
+            font=('Yu Gothic', self.scaled_fonts['small'], 'bold')
+        )
+        self.output_text.tag_configure(
+            "text", 
+            foreground=self.colors['text']
+        )
+        self.output_text.tag_configure(
+            "status", 
+            foreground=self.colors['warning'], 
+            font=('Yu Gothic', self.scaled_fonts['small'], 'italic')
+        )
+
+    def create_responsive_save_section(self, parent):
+        """Create save section with responsive layout"""
+        slf = tk.Frame(parent, bg=self.colors['background'])
+        slf.pack(pady=self.scaled_dimensions['padding_small'])
+        
+        tf = tk.Frame(slf, bg=self.colors['background'])
+        tf.pack(pady=(0, self.scaled_dimensions['padding_small']))
+        
+        self.save_transcription_btn = ttk.Button(
+            tf,
+            text=self.t("save_transcription"),
+            command=self.save_transcription,
+            style='Primary.TButton',
+            state=tk.DISABLED
+        )
+        self.save_transcription_btn.pack(side=tk.LEFT, padx=(0, self.scaled_dimensions['padding_medium']))
+        
+        self.save_subtitle_btn = ttk.Button(
+            tf,
+            text=self.t("save_subtitle"),
+            command=self.save_subtitle_file,
+            style='Success.TButton',
+            state=tk.DISABLED
+        )
+        self.save_subtitle_btn.pack(side=tk.LEFT)
+
+    def open_parameter_window(self):
+        """Open parameter settings window with responsive layout"""
+        win = tk.Toplevel(self.root)
+        win.title(self.t("parameter_settings"))
+        
+        # Calculate window size
+        param_width = int(500 * self.scale)
+        param_height = int(460 * self.scale)
+        win.geometry(f"{param_width}x{param_height}")
+        win.configure(bg=self.colors['surface'])
+        
+        # Center the parameter window
+        win.update_idletasks()
+        x = (win.winfo_screenwidth() // 2) - (param_width // 2)
+        y = (win.winfo_screenheight() // 2) - (param_height // 2)
+        win.geometry(f"{param_width}x{param_height}+{x}+{y}")
+        
+        pad = self.scaled_dimensions['padding_large']
+        small_pad = self.scaled_dimensions['padding_small']
+        
+        # Temperature
+        tk.Label(win, text="Temperature:",
+                 bg=self.colors['surface'], 
+                 fg=self.colors['text'],
+                 font=('Yu Gothic', self.scaled_fonts['normal'])).pack(anchor=tk.W, padx=pad, pady=(pad,0))
+        self.temp_var = tk.DoubleVar(value=0.0)
+        tk.Scale(win, from_=0.0, to=1.0, resolution=0.01, orient=tk.HORIZONTAL,
+                 variable=self.temp_var, 
+                 font=('Yu Gothic', self.scaled_fonts['small'])).pack(fill=tk.X, padx=pad)
+
+        # best_of
+        tk.Label(win, text="best_of:",
+                 bg=self.colors['surface'], 
+                 fg=self.colors['text'],
+                 font=('Yu Gothic', self.scaled_fonts['normal'])).pack(anchor=tk.W, padx=pad, pady=(pad,0))
+        self.best_of_var = tk.IntVar(value=10)
+        tk.Spinbox(win, from_=1, to=10, textvariable=self.best_of_var,
+                   font=('Yu Gothic', self.scaled_fonts['normal'])).pack(fill=tk.X, padx=pad)
+
+        # beam_size
+        tk.Label(win, text="beam_size:",
+                 bg=self.colors['surface'], 
+                 fg=self.colors['text'],
+                 font=('Yu Gothic', self.scaled_fonts['normal'])).pack(anchor=tk.W, padx=pad, pady=(pad,0))
+        self.beam_var = tk.IntVar(value=10)
+        tk.Spinbox(win, from_=1, to=20, textvariable=self.beam_var,
+                   font=('Yu Gothic', self.scaled_fonts['normal'])).pack(fill=tk.X, padx=pad)
+
+        # logprob_threshold
+        tk.Label(win, text="logprob_threshold:",
+                 bg=self.colors['surface'], 
+                 fg=self.colors['text'],
+                 font=('Yu Gothic', self.scaled_fonts['normal'])).pack(anchor=tk.W, padx=pad, pady=(pad,0))
+        self.logp_var = tk.DoubleVar(value=-1)
+        tk.Scale(win, from_=-5.0, to=0.0, resolution=0.1, orient=tk.HORIZONTAL,
+                 variable=self.logp_var,
+                 font=('Yu Gothic', self.scaled_fonts['small'])).pack(fill=tk.X, padx=pad)
+
+        # no_speech_threshold
+        tk.Label(win, text="no_speech_threshold:",
+                 bg=self.colors['surface'], 
+                 fg=self.colors['text'],
+                 font=('Yu Gothic', self.scaled_fonts['normal'])).pack(anchor=tk.W, padx=pad, pady=(pad,0))
+        self.nospeech_var = tk.DoubleVar(value=0.5)
+        tk.Scale(win, from_=0.0, to=1.0, resolution=0.01, orient=tk.HORIZONTAL,
+                 variable=self.nospeech_var,
+                 font=('Yu Gothic', self.scaled_fonts['small'])).pack(fill=tk.X, padx=pad)
+
+        # condition_on_previous_text
+        self.cond_prev_var = tk.BooleanVar(value=False)
+        tk.Checkbutton(win,
+                       text="condition_on_previous_text",
+                       variable=self.cond_prev_var,
+                       bg=self.colors['surface'],
+                       fg=self.colors['text'],
+                       font=('Yu Gothic', self.scaled_fonts['normal'])).pack(anchor=tk.W, padx=pad, pady=(pad,0))
+
+        # OK button
+        def apply_params():
+            self.whisper_params = {
+                "temperature": self.temp_var.get(),
+                "best_of": self.best_of_var.get(),
+                "beam_size": self.beam_var.get(),
+                "logprob_threshold": self.logp_var.get(),
+                "no_speech_threshold": self.nospeech_var.get(),
+                "condition_on_previous_text": self.cond_prev_var.get(),
+            }
+            win.destroy()
+            self.append_status_message(f"{self.t('parameters_updated')} {self.whisper_params}")
+
+        ttk.Button(win, text=self.t("ok"), command=apply_params, style='Success.TButton')\
+            .pack(pady=self.scaled_dimensions['padding_large'])
 
     def on_language_change(self, event=None):
         """Handle language change event"""
@@ -827,91 +1215,6 @@ class AudioSubtitleSystem:
         self.save_transcription_btn.config(text=self.t("save_transcription"))
         self.save_subtitle_btn.config(text=self.t("save_subtitle"))
 
-    def create_file_section(self, parent):
-        ff = tk.Frame(parent, bg=self.colors['surface'], relief='solid', bd=1)
-        ff.pack(fill=tk.X, pady=(0,10))
-        inner = tk.Frame(ff, bg=self.colors['surface'])
-        inner.pack(fill=tk.X, padx=15, pady=12)
-        
-        self.file_section_label = tk.Label(inner, text=self.t("audio_file_selection"),
-                 font=('Yu Gothic',13,'bold'),
-                 fg=self.colors['text'], bg=self.colors['surface'])
-        self.file_section_label.pack(anchor=tk.W, pady=(0,6))
-        
-        btnf = tk.Frame(inner, bg=self.colors['surface'])
-        btnf.pack(fill=tk.X, pady=(0,8))
-        
-        self.select_file_btn = ttk.Button(btnf,
-                                          text=self.t("select_file"),
-                                          command=self.select_audio_file,
-                                          style='Primary.TButton')
-        self.select_file_btn.pack(side=tk.LEFT, padx=(0,12))
-        
-        self.transcribe_btn = ttk.Button(btnf,
-                                         text=self.t("start_transcription"),
-                                         command=self.transcribe_audio,
-                                         style='Success.TButton',
-                                         state=tk.DISABLED if not WHISPER_AVAILABLE else tk.DISABLED)
-        self.transcribe_btn.pack(side=tk.LEFT)
-        
-        self.file_path_label = tk.Label(inner,
-                                        text=self.t("no_file_selected"),
-                                        font=('Yu Gothic',10),
-                                        fg=self.colors['text_light'],
-                                        bg=self.colors['surface'])
-        self.file_path_label.pack(anchor=tk.W)
-
-    def create_model_section(self, parent):
-        mf = tk.Frame(parent, bg=self.colors['surface'], relief='solid', bd=1)
-        mf.pack(fill=tk.X, pady=(0,10))
-        inner = tk.Frame(mf, bg=self.colors['surface'])
-        inner.pack(fill=tk.X, padx=15, pady=12)
-        
-        self.model_section_label = tk.Label(inner, text=self.t("whisper_model"),
-                 font=('Yu Gothic',13,'bold'),
-                 fg=self.colors['text'], bg=self.colors['surface'])
-        self.model_section_label.pack(anchor=tk.W, pady=(0,6))
-        
-        self.model_var = tk.StringVar(value="large-v3")
-        opts = ["tiny","base","small","medium","large","large-v2","large-v3","large-v3-turbo"]
-        self.model_combo = ttk.Combobox(inner,
-                                        textvariable=self.model_var,
-                                        values=opts,
-                                        font=('Yu Gothic',11),
-                                        state="readonly" if WHISPER_AVAILABLE else "disabled",
-                                        width=30)
-        self.model_combo.set("large-v3")
-        self.model_combo.pack(fill=tk.X)
-
-    def create_topic_section(self, parent):
-        tf = tk.Frame(parent, bg=self.colors['surface'], relief='solid', bd=1)
-        tf.pack(fill=tk.X, pady=(0,10))
-        inner = tk.Frame(tf, bg=self.colors['surface'])
-        inner.pack(fill=tk.X, padx=15, pady=12)
-        
-        self.keyword_label = tk.Label(inner, text=self.t("keyword_optional"),
-                 font=('Yu Gothic',13,'bold'),
-                 fg=self.colors['text'], bg=self.colors['surface'])
-        self.keyword_label.pack(anchor=tk.W, pady=(0,6))
-        
-        self.topic_entry = ttk.Entry(inner, font=('Yu Gothic',11), style='Modern.TEntry')
-        self.topic_entry.pack(fill=tk.X, pady=(0,10))
-        
-        self.trans_lang_label = tk.Label(inner, text=self.t("transcription_language"),
-                 font=('Yu Gothic',13,'bold'),
-                 fg=self.colors['text'], bg=self.colors['surface'])
-        self.trans_lang_label.pack(anchor=tk.W, pady=(0,6))
-        
-        self.transcription_lang_var = tk.StringVar(value="ja")
-        self.transcription_language_combo = ttk.Combobox(
-            inner,
-            textvariable=self.transcription_lang_var,
-            font=('Yu Gothic',11),
-            state="readonly" if WHISPER_AVAILABLE else "disabled",
-            width=30)
-        self.update_language_combo()
-        self.transcription_language_combo.pack(fill=tk.X)
-
     def update_language_combo(self):
         """Update transcription language combo box with translated names"""
         lang_codes = self.t("language_codes")
@@ -929,104 +1232,34 @@ class AudioSubtitleSystem:
         self.transcription_language_combo['values'] = langs
         self.transcription_language_combo.set(f"ja - {lang_codes['ja']}")
 
-    def create_status_section(self, parent):
-        sf = tk.Frame(parent, bg=self.colors['surface'], relief='solid', bd=1)
-        sf.pack(fill=tk.X, pady=(0,10))
-        sin = tk.Frame(sf, bg=self.colors['surface'])
-        sin.pack(fill=tk.X, padx=15, pady=10)
+    def run_pytorch_downloader(self):
+        """Launch PyTorch downloader"""
+        downloader_path = Path("pytorch_downloader.exe")
+        if not downloader_path.exists():
+            downloader_path = Path("pytorch_downloader.py")
         
-        row = tk.Frame(sin, bg=self.colors['surface'])
-        row.pack(fill=tk.X, pady=(0,8))
-        
-        self.status_section_label = tk.Label(row, text=self.t("system_status"),
-                 font=('Yu Gothic',11,'bold'),
-                 fg=self.colors['text'], bg=self.colors['surface'])
-        self.status_section_label.pack(side=tk.LEFT)
-        
-        self.status_label = tk.Label(row,
-                                     text=self.t("waiting_to_start"),
-                                     font=('Yu Gothic',11),
-                                     fg=self.colors['text_light'],
-                                     bg=self.colors['surface'])
-        self.status_label.pack(side=tk.RIGHT)
-        
-        self.progress_bar = ttk.Progressbar(sin, length=500, mode='indeterminate')
-        self.progress_bar.pack(fill=tk.X, pady=(0,8))
-        
-        trow = tk.Frame(sin, bg=self.colors['surface'])
-        trow.pack(fill=tk.X)
-        
-        self.elapsed_label = tk.Label(trow,
-                                      text=f"{self.t('elapsed')} 00:00",
-                                      font=('Yu Gothic',10),
-                                      fg=self.colors['text_light'],
-                                      bg=self.colors['surface'])
-        self.elapsed_label.pack(side=tk.LEFT)
-        
-        self.duration_label = tk.Label(
-            trow,
-            text=f"{self.t('duration')} 00:00",
-            font=('Yu Gothic', 10),
-            fg=self.colors['text_light'],
-            bg=self.colors['surface'])
-        self.duration_label.pack(side=tk.RIGHT)
+        if downloader_path.exists():
+            try:
+                if platform.system() == "Windows" and downloader_path.suffix == ".exe":
+                    subprocess.Popen([str(downloader_path)])
+                else:
+                    subprocess.Popen([sys.executable, str(downloader_path)])
+                messagebox.showinfo(self.t("info"), self.t("downloader_launched"))
+            except Exception as e:
+                messagebox.showerror(self.t("error"), f"{self.t('downloader_launch_failed')} {e}")
+        else:
+            messagebox.showerror(self.t("error"), self.t("downloader_not_found"))
 
-    def create_transcription_output_section(self, parent):
-        """Create the real-time transcription output section"""
-        tf = tk.Frame(parent, bg=self.colors['surface'], relief='solid', bd=1)
-        tf.pack(fill=tk.BOTH, expand=True, pady=(0,10))
-        inner = tk.Frame(tf, bg=self.colors['surface'])
-        inner.pack(fill=tk.BOTH, expand=True, padx=15, pady=12)
-        
-        header_frame = tk.Frame(inner, bg=self.colors['surface'])
-        header_frame.pack(fill=tk.X, pady=(0,6))
-        
-        self.output_section_label = tk.Label(header_frame, text=self.t("transcription_output"),
-                 font=('Yu Gothic',13,'bold'),
-                 fg=self.colors['text'], bg=self.colors['surface'])
-        self.output_section_label.pack(side=tk.LEFT)
-        
-        self.clear_output_btn = ttk.Button(header_frame,
-                                           text=self.t("clear"),
-                                           command=self.clear_transcription_output)
-        self.clear_output_btn.pack(side=tk.RIGHT)
-        
-        self.output_text = scrolledtext.ScrolledText(
-            inner,
-            height=8,
-            font=('Yu Gothic', 10),
-            bg=self.colors['surface'],
-            fg=self.colors['text'],
-            wrap=tk.WORD,
-            relief='solid',
-            borderwidth=1,
-            state=tk.DISABLED
-        )
-        self.output_text.pack(fill=tk.BOTH, expand=True)
-        
-        self.output_text.tag_configure("timestamp", foreground=self.colors['accent'], font=('Yu Gothic', 10, 'bold'))
-        self.output_text.tag_configure("text", foreground=self.colors['text'])
-        self.output_text.tag_configure("status", foreground=self.colors['warning'], font=('Yu Gothic', 10, 'italic'))
-
-    def create_save_section(self, parent):
-        slf = tk.Frame(parent, bg=self.colors['background'])
-        slf.pack(pady=8)
-        tf = tk.Frame(slf, bg=self.colors['background'])
-        tf.pack(pady=(0,8))
-        
-        self.save_transcription_btn = ttk.Button(tf,
-                                                 text=self.t("save_transcription"),
-                                                 command=self.save_transcription,
-                                                 style='Primary.TButton',
-                                                 state=tk.DISABLED)
-        self.save_transcription_btn.pack(side=tk.LEFT, padx=(0,12))
-        
-        self.save_subtitle_btn = ttk.Button(tf,
-                                            text=self.t("save_subtitle"),
-                                            command=self.save_subtitle_file,
-                                            style='Success.TButton',
-                                            state=tk.DISABLED)
-        self.save_subtitle_btn.pack(side=tk.LEFT)
+    def recheck_dependencies(self):
+        """Recheck PyTorch/Whisper availability"""
+        self.check_dependencies()
+        if WHISPER_AVAILABLE:
+            messagebox.showinfo(self.t("success"), self.t("dependencies_loaded"))
+            self.root.destroy()
+            app = AudioSubtitleSystem()
+            app.run()
+        else:
+            messagebox.showwarning(self.t("warning"), self.t("dependencies_not_installed"))
 
     def update_status(self, message, color=None):
         """Thread-safe status update"""
